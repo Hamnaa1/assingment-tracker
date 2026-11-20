@@ -46,6 +46,7 @@ type Action =
   | { type: "setWeights"; weights: PriorityWeights }
   | { type: "setDashboard"; dashboard: DashboardPrefs; availability?: SchedulePrefs }
   | { type: "setOnboarding"; onboarding: OnboardingRecord; dashboard?: DashboardPrefs; availability?: SchedulePrefs }
+  | { type: "commitPrefs"; availability?: SchedulePrefs; dashboard?: DashboardPrefs; onboarding?: OnboardingRecord; plan?: { sessions: StudySession[]; removeIds: string[]; taskUpdates: Task[]; log: ScheduleLogEntry } }
   | { type: "applyReschedule"; sessions: StudySession[]; removeIds: string[]; taskUpdates: Task[]; log: ScheduleLogEntry }
   | { type: "reset" }
   | { type: "hydrate"; state: State };
@@ -100,6 +101,16 @@ function reducer(state: State, action: Action): State {
       return { ...state, dashboard: action.dashboard, availability: action.availability ?? state.availability };
     case "setOnboarding":
       return { ...state, onboarding: action.onboarding, dashboard: action.dashboard ?? state.dashboard, availability: action.availability ?? state.availability };
+    case "commitPrefs": {
+      const next: State = {
+        ...state,
+        availability: action.availability ?? state.availability,
+        dashboard: action.dashboard ?? state.dashboard,
+        onboarding: action.onboarding ?? state.onboarding,
+      };
+      if (!action.plan) return next;
+      return reducer(next, { type: "applyReschedule", ...action.plan });
+    }
     case "setWeights":
       return { ...state, priorityWeights: action.weights };
     case "applyReschedule": {
@@ -231,7 +242,15 @@ export function MomentumProvider({ children }: { children: ReactNode }) {
       supabase
         .from("momentum_state")
         .upsert({ user_id: userId, data: state as never, updated_at: new Date().toISOString() })
-        .then(({ error }) => error && console.error("Save failed", error.message));
+        .then(({ error }) => {
+          if (error) return console.error("Save failed", error.message);
+          // The server checks the saved workspace and awards any XP/achievements earned.
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+          supabase.rpc("sync_xp", { p_tz: tz }).then(({ data, error: e }) => {
+            if (e) return console.error("XP sync failed", e.message);
+            window.dispatchEvent(new CustomEvent("momentum:xp", { detail: data }));
+          });
+        });
     }, 600);
     return () => clearTimeout(t);
   }, [state, userId, dataReady]);

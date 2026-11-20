@@ -103,13 +103,19 @@ export function reschedule(ws: Workspace, now = new Date()): RescheduleResult {
   const nowIso = now.toISOString();
   const done = new Set(ws.tasks.filter((t) => t.completed).map((t) => t.id));
   const old = ws.studySessions ?? [];
-  const keep = old.filter((s) => s.end <= nowIso && (!s.taskId || done.has(s.taskId)));
+  // Past finished sessions are history; locked future sessions are never moved.
+  const keep = old.filter((s) => (s.end <= nowIso && (!s.taskId || done.has(s.taskId))) || (s.locked && s.end > nowIso));
+  const lockedFuture = keep.filter((s) => s.locked && s.end > nowIso);
+  const lockedMinutes = new Map<string, number>();
+  lockedFuture.forEach((s) => s.taskId && lockedMinutes.set(s.taskId, (lockedMinutes.get(s.taskId) ?? 0) + (Date.parse(s.end) - Date.parse(s.start)) / 60000));
   const removeIds = old.filter((s) => !keep.includes(s)).map((s) => s.id);
   const prefs = prefsOf(ws);
   const ranked = rankAssignments(ws, now);
   const priority = Object.fromEntries(ranked.map(({ a, p }) => [a.id, p.score]));
   const events = ws.calendarEvents ?? [];
-  const result = planSchedule({ tasks: ws.tasks, assignments: ws.assignments, priority }, busyIntervals(events, [], prefs.bufferMinutes), now, prefs);
+  // Locked sessions already cover part of their task's work and block that time.
+  const planTasks = ws.tasks.map((t) => (lockedMinutes.has(t.id) ? { ...t, estimatedMinutes: Math.max(0, t.estimatedMinutes - lockedMinutes.get(t.id)!) } : t));
+  const result = planSchedule({ tasks: planTasks, assignments: ws.assignments, priority }, busyIntervals(events, lockedFuture, prefs.bufferMinutes), now, prefs);
 
   const today = toYmd(now);
   const byTask = new Map<string, StudySession[]>();
@@ -121,7 +127,7 @@ export function reschedule(ws: Workspace, now = new Date()): RescheduleResult {
   const taskUpdates: Task[] = [];
   const titleOf = (id: string) => ws.assignments.find((a) => a.id === id)?.title ?? "assignment";
 
-  for (const t of ws.tasks.filter((x) => !x.completed && x.estimatedMinutes > 0)) {
+  for (const t of planTasks.filter((x) => !x.completed && x.estimatedMinutes > 0)) {
     const next = byTask.get(t.id) ?? [];
     const prev = oldByTask.get(t.id) ?? [];
     const missed = prev.filter((s) => s.end < nowIso);
@@ -155,6 +161,36 @@ export function reschedule(ws: Workspace, now = new Date()): RescheduleResult {
     shortfall: result.shortfall,
     log: { at: now.toISOString(), summary, changes: changes.length ? changes : ["Nothing needed to move — your schedule already fits."] },
   };
+}
+
+/* ---------------- Automatic plan updates after preference changes ---------------- */
+
+export interface PlanConflict { kind: "deadline" | "locked"; message: string }
+
+/** Did a change touch anything the scheduler uses? (Theme/layout/widget-only changes don't.) */
+export const affectsSchedule = (before: SchedulePrefs, after: SchedulePrefs) => JSON.stringify(before) !== JSON.stringify(after);
+
+/**
+ * Re-plans unfinished future work with new study preferences and reports
+ * anything that needs the student's decision before it is applied.
+ */
+export function planWithPrefs(ws: Workspace, next: SchedulePrefs, now = new Date()): { result: RescheduleResult; conflicts: PlanConflict[] } {
+  const before = reschedule(ws, now);
+  const result = reschedule({ ...ws, availability: next }, now);
+  const conflicts: PlanConflict[] = [];
+  const titleOf = (id: string) => ws.assignments.find((a) => a.id === id)?.title ?? "an assignment";
+  for (const [id, mins] of Object.entries(result.shortfall)) {
+    const extra = mins - (before.shortfall[id] ?? 0);
+    if (extra >= 15) conflicts.push({ kind: "deadline", message: `${hours(mins)} of “${titleOf(id)}” won't fit before its deadline.` });
+  }
+  const nowIso = now.toISOString();
+  for (const s of ws.studySessions ?? []) {
+    if (!s.locked || s.end <= nowIso) continue;
+    const st = new Date(s.start), w = next.days[st.getDay()];
+    const startH = st.getHours() + st.getMinutes() / 60, end = new Date(s.end), endH = end.getHours() + end.getMinutes() / 60;
+    if (!w || startH < w.start || endH > w.end) conflicts.push({ kind: "locked", message: `Locked session “${s.title}” (${fmt(s.start)}) is outside your new study hours. It will stay where it is.` });
+  }
+  return { result, conflicts };
 }
 
 /* ---------------- helpers ---------------- */

@@ -15,6 +15,7 @@ import { PRESETS, THEMES, themeOf, WIDGETS, visibleWidgets, type ColourTheme, ty
 import { STUDY_PERIODS, type StudyPeriod } from "@/lib/momentum/schedule";
 import { defaultAnswers, profileFromAnswers, sessionLength, withFocusSupport, type OnboardingAnswers } from "@/lib/momentum/onboarding";
 import { cn } from "@/lib/utils";
+import { usePlanCommit } from "@/components/momentum/PlanUpdate";
 import { toast } from "sonner";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -40,6 +41,7 @@ export default function Onboarding() {
   const [a, setA] = useState<OnboardingAnswers>(() => state.onboarding?.answers ?? defaultAnswers(state.dashboard, state.availability ? prefsOf(state) : undefined));
   const [step, setStep] = useState(0);
   const [confirm, setConfirm] = useState(false);
+  const { commit, dialog } = usePlanCommit();
   const set = (p: Partial<OnboardingAnswers>) => setA((x) => ({ ...x, ...p }));
 
   // Live theme preview while onboarding; restore the saved theme on leave.
@@ -138,9 +140,11 @@ export default function Onboarding() {
 
   const last = steps.length - 1;
   const apply = () => {
-    dispatch({ type: "setOnboarding", onboarding: { status: "completed", at: new Date().toISOString(), answers: a }, ...profile });
-    toast.success("Momentum is now yours", { description: "Use Auto-reschedule on your Study Plan to apply these to sessions already planned." });
-    navigate("/plan");
+    // Saves through the shared commit so the future Study Plan is rebuilt automatically.
+    commit({ onboarding: { status: "completed", at: new Date().toISOString(), answers: a }, ...profile }, () => {
+      toast.success("Momentum is now yours");
+      navigate("/plan");
+    });
   };
   const finish = () => (hasExisting ? setConfirm(true) : apply());
   const skip = () => {
@@ -170,6 +174,7 @@ export default function Onboarding() {
           : <Button onClick={finish}><Check className="mr-1.5 h-4 w-4" />Save my profile</Button>}
       </div>
 
+      {dialog}
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>

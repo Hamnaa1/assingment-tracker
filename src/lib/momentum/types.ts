@@ -48,6 +48,8 @@ export interface FocusSession {
   taskId?: string;
   plannedMinutes: number;
   actualMinutes: number;
+  /** Minutes the timer actually ran (excludes pauses and breaks). Used for XP. */
+  activeMinutes?: number;
   startedAt: string;
   endedAt: string;
   completed: boolean;
@@ -95,6 +97,8 @@ export interface StudySession {
   end: string; // ISO datetime
   description?: string;
   reminderMinutes: number;
+  /** Locked sessions are never moved by automatic rescheduling. */
+  locked?: boolean;
 }
 
 export type CalendarProvider = "google" | "outlook" | "apple" | "other";

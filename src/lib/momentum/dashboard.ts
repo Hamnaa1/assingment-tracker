@@ -35,6 +35,26 @@ export interface StudyGoals {
   dailyTasks: number;
 }
 
+/** Main dashboard widgets (critical deadline/conflict warnings are always shown). */
+export type HomeWidgetId = "welcome" | "xp" | "stats" | "daily" | "next" | "analytics" | "leaderboard" | "priorities" | "deadlines";
+export const HOME_WIDGETS: Record<HomeWidgetId, { label: string }> = {
+  welcome: { label: "Welcome" },
+  xp: { label: "XP & level" },
+  stats: { label: "Quick stats" },
+  daily: { label: "Daily progress" },
+  next: { label: "Next session" },
+  analytics: { label: "Productivity chart" },
+  leaderboard: { label: "Friends leaderboard" },
+  priorities: { label: "Priority assignments" },
+  deadlines: { label: "Upcoming deadlines" },
+};
+export const ALL_HOME_WIDGETS = Object.keys(HOME_WIDGETS) as HomeWidgetId[];
+
+export interface AccessibilityPrefs { reducedMotion: boolean; textSize: "normal" | "large" | "xlarge" }
+export interface NotificationPrefs { achievements: boolean; xp: boolean; planUpdates: boolean; deadlineReminders: boolean }
+export const DEFAULT_ACCESSIBILITY: AccessibilityPrefs = { reducedMotion: false, textSize: "normal" };
+export const DEFAULT_NOTIFICATIONS: NotificationPrefs = { achievements: true, xp: true, planUpdates: true, deadlineReminders: true };
+
 export interface DashboardPrefs {
   preset: DashboardPreset | "custom";
   mode: "minimal" | "detailed";
@@ -42,6 +62,10 @@ export interface DashboardPrefs {
   hidden: WidgetId[];
   goals: StudyGoals;
   theme?: ColourTheme;
+  homeOrder?: HomeWidgetId[];
+  homeHidden?: HomeWidgetId[];
+  accessibility?: AccessibilityPrefs;
+  notifications?: NotificationPrefs;
 }
 
 export interface Habits {
@@ -62,8 +86,20 @@ export const DEFAULT_DASHBOARD: DashboardPrefs = { preset: "detailed", mode: "de
 export function dashboardOf(saved?: Partial<DashboardPrefs>): DashboardPrefs {
   const d = { ...DEFAULT_DASHBOARD, ...(saved ?? {}), goals: { ...DEFAULT_DASHBOARD.goals, ...(saved?.goals ?? {}) } };
   const order = d.order.filter((w) => ALL_WIDGETS.includes(w));
-  return { ...d, theme: themeOf(d), order: [...order, ...ALL_WIDGETS.filter((w) => !order.includes(w))], hidden: d.hidden.filter((w) => ALL_WIDGETS.includes(w)) };
+  const home = (d.homeOrder ?? []).filter((w) => ALL_HOME_WIDGETS.includes(w));
+  return {
+    ...d,
+    theme: themeOf(d),
+    order: [...order, ...ALL_WIDGETS.filter((w) => !order.includes(w))],
+    hidden: d.hidden.filter((w) => ALL_WIDGETS.includes(w)),
+    homeOrder: [...home, ...ALL_HOME_WIDGETS.filter((w) => !home.includes(w))],
+    homeHidden: (d.homeHidden ?? []).filter((w) => ALL_HOME_WIDGETS.includes(w)),
+    accessibility: { ...DEFAULT_ACCESSIBILITY, ...(d.accessibility ?? {}) },
+    notifications: { ...DEFAULT_NOTIFICATIONS, ...(d.notifications ?? {}) },
+  };
 }
+
+export const visibleHomeWidgets = (d: DashboardPrefs) => (d.homeOrder ?? ALL_HOME_WIDGETS).filter((w) => !(d.homeHidden ?? []).includes(w));
 
 export const visibleWidgets = (d: DashboardPrefs) => d.order.filter((w) => !d.hidden.includes(w));
 
@@ -82,7 +118,7 @@ export const withHabits = (prefs: SchedulePrefs, h: Habits): SchedulePrefs => ({
   preferredTimes: h.preferredTimes,
 });
 
-export function moveWidget(order: WidgetId[], id: WidgetId, dir: -1 | 1): WidgetId[] {
+export function moveWidget<T extends string>(order: T[], id: T, dir: -1 | 1): T[] {
   const i = order.indexOf(id), j = i + dir;
   if (i < 0 || j < 0 || j >= order.length) return order;
   const next = [...order];

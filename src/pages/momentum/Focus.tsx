@@ -33,8 +33,9 @@ export default function Focus() {
   const [params] = useSearchParams();
 
   const [assignmentId, setAssignmentId] = useState(params.get("assignment") ?? "");
-  const [taskId, setTaskId] = useState("");
-  const [duration, setDuration] = useState(45);
+  const [taskId, setTaskId] = useState(params.get("task") ?? "");
+  // "Lock In Now" passes the recommended session length.
+  const [duration, setDuration] = useState(() => Math.min(180, Math.max(5, parseInt(params.get("minutes") ?? "") || 45)));
 
   const [phase, setPhase] = useState<Phase>("setup");
   const [secondsLeft, setSecondsLeft] = useState(duration * 60);
@@ -77,6 +78,8 @@ export default function Focus() {
 
   const finishSession = (completed: boolean) => {
     const actual = Math.round((Date.now() - startedRef.current) / 60000);
+    // Active minutes = time the timer actually ran (pauses excluded).
+    const active = Math.floor((duration * 60 - secondsLeft) / 60);
     dispatch({
       type: "addSession",
       session: {
@@ -85,13 +88,14 @@ export default function Focus() {
         taskId: taskId || undefined,
         plannedMinutes: duration,
         actualMinutes: Math.max(1, Math.min(actual, duration)),
+        activeMinutes: completed ? duration : Math.max(0, Math.min(active, duration)),
         startedAt,
         endedAt: new Date().toISOString(),
         completed,
       },
     });
     setPhase("done");
-    if (completed) toast.success("Session complete — nice work.", { description: "Your focus hours have been logged." });
+    if (completed) toast.success("Session complete — nice work.", { description: `${duration} focus minutes logged — XP is on its way.` });
   };
 
   const submitProof = () => {

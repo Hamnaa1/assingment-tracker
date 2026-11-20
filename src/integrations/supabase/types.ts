@@ -506,6 +506,69 @@ export type Database = {
           },
         ]
       }
+      challenges: {
+        Row: {
+          created_at: string
+          creator: string
+          ends_at: string
+          id: string
+          kind: string
+          opponent: string
+          starts_at: string
+          status: string
+          target: number
+        }
+        Insert: {
+          created_at?: string
+          creator: string
+          ends_at: string
+          id?: string
+          kind: string
+          opponent: string
+          starts_at?: string
+          status?: string
+          target: number
+        }
+        Update: {
+          created_at?: string
+          creator?: string
+          ends_at?: string
+          id?: string
+          kind?: string
+          opponent?: string
+          starts_at?: string
+          status?: string
+          target?: number
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          addressee: string
+          created_at: string
+          id: string
+          requester: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee: string
+          created_at?: string
+          id?: string
+          requester: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee?: string
+          created_at?: string
+          id?: string
+          requester?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       interviews: {
         Row: {
           application_id: string
@@ -1181,6 +1244,69 @@ export type Database = {
           },
         ]
       }
+      student_achievements: {
+        Row: {
+          achievement: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_profiles: {
+        Row: {
+          avatar: string
+          best_streak: number
+          created_at: string
+          current_streak: number
+          display_name: string
+          friend_code: string
+          leaderboard_opt_in: boolean
+          share_focus: boolean
+          share_streak: boolean
+          user_id: string
+          username: string
+          xp_started_at: string
+        }
+        Insert: {
+          avatar?: string
+          best_streak?: number
+          created_at?: string
+          current_streak?: number
+          display_name?: string
+          friend_code: string
+          leaderboard_opt_in?: boolean
+          share_focus?: boolean
+          share_streak?: boolean
+          user_id: string
+          username: string
+          xp_started_at?: string
+        }
+        Update: {
+          avatar?: string
+          best_streak?: number
+          created_at?: string
+          current_streak?: number
+          display_name?: string
+          friend_code?: string
+          leaderboard_opt_in?: boolean
+          share_focus?: boolean
+          share_streak?: boolean
+          user_id?: string
+          username?: string
+          xp_started_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           candidate_id: string
@@ -1234,6 +1360,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_blocks: {
+        Row: {
+          blocked: string
+          blocker: string
+          created_at: string
+        }
+        Insert: {
+          blocked: string
+          blocker: string
+          created_at?: string
+        }
+        Update: {
+          blocked?: string
+          blocker?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       user_invitations: {
         Row: {
@@ -1310,16 +1454,127 @@ export type Database = {
         }
         Relationships: []
       }
+      xp_rewards: {
+        Row: {
+          amount: number
+          daily_cap: number | null
+          reason: string
+        }
+        Insert: {
+          amount: number
+          daily_cap?: number | null
+          reason: string
+        }
+        Update: {
+          amount?: number
+          daily_cap?: number | null
+          reason?: string
+        }
+        Relationships: []
+      }
+      xp_transactions: {
+        Row: {
+          activity_at: string
+          amount: number
+          created_at: string
+          id: string
+          reason: string
+          ref: string
+          user_id: string
+        }
+        Insert: {
+          activity_at: string
+          amount: number
+          created_at?: string
+          id?: string
+          reason: string
+          ref: string
+          user_id: string
+        }
+        Update: {
+          activity_at?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          reason?: string
+          ref?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      are_friends: { Args: { a: string; b: string }; Returns: boolean }
+      block_user: { Args: { p_other: string }; Returns: undefined }
       can_access_job: {
         Args: { _job_id: string; _user_id: string }
         Returns: boolean
       }
       can_insert_application: { Args: { _job_id: string }; Returns: boolean }
+      challenge_progress_for: {
+        Args: { p_from: string; p_kind: string; p_to: string; p_user: string }
+        Returns: number
+      }
+      create_challenge: {
+        Args: {
+          p_days: number
+          p_kind: string
+          p_opponent: string
+          p_target: number
+        }
+        Returns: string
+      }
+      ensure_profile: {
+        Args: never
+        Returns: {
+          avatar: string
+          best_streak: number
+          created_at: string
+          current_streak: number
+          display_name: string
+          friend_code: string
+          leaderboard_opt_in: boolean
+          share_focus: boolean
+          share_streak: boolean
+          user_id: string
+          username: string
+          xp_started_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "student_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      find_student: {
+        Args: { p_query: string }
+        Returns: {
+          avatar: string
+          display_name: string
+          user_id: string
+          username: string
+        }[]
+      }
+      friend_leaderboard: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avatar: string
+          display_name: string
+          focus_minutes: number
+          goal_days: number
+          is_me: boolean
+          opted_in: boolean
+          period_xp: number
+          streak: number
+          tasks: number
+          total_xp: number
+          user_id: string
+        }[]
+      }
       get_user_org: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1328,7 +1583,79 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_blocked_between: { Args: { a: string; b: string }; Returns: boolean }
       is_org_admin: { Args: { _org_id: string }; Returns: boolean }
+      list_connections: {
+        Args: never
+        Returns: {
+          avatar: string
+          display_name: string
+          id: string
+          incoming: boolean
+          kind: string
+          other: string
+          status: string
+          username: string
+        }[]
+      }
+      my_challenges: {
+        Args: never
+        Returns: {
+          ends_at: string
+          id: string
+          incoming: boolean
+          kind: string
+          my_progress: number
+          other_avatar: string
+          other_name: string
+          starts_at: string
+          status: string
+          target: number
+          their_progress: number
+        }[]
+      }
+      remove_friend: { Args: { p_other: string }; Returns: undefined }
+      respond_challenge: {
+        Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
+      respond_friend_request: {
+        Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
+      send_friend_request: { Args: { p_target: string }; Returns: string }
+      sync_xp: { Args: { p_tz?: string }; Returns: Json }
+      unblock_user: { Args: { p_other: string }; Returns: undefined }
+      update_my_profile: {
+        Args: {
+          p_avatar: string
+          p_display_name: string
+          p_opt_in: boolean
+          p_share_focus: boolean
+          p_share_streak: boolean
+          p_username: string
+        }
+        Returns: {
+          avatar: string
+          best_streak: number
+          created_at: string
+          current_streak: number
+          display_name: string
+          friend_code: string
+          leaderboard_opt_in: boolean
+          share_focus: boolean
+          share_streak: boolean
+          user_id: string
+          username: string
+          xp_started_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "student_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "basic" | "job_admin" | "site_admin"

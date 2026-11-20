@@ -1,3 +1,4 @@
+import Friends from "./pages/momentum/Friends";
 import StudyPlan from "./pages/momentum/StudyPlan";
 import Onboarding from "./pages/momentum/Onboarding";
 import CalendarPage from "./pages/momentum/Calendar";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/focus" element={<Focus />} />
               <Route path="/review" element={<Review />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/friends" element={<Friends />} />
               <Route path="/welcome" element={<Onboarding />} />
             </Route>
             <Route path="*" element={<NotFound />} />

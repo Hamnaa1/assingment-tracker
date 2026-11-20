@@ -1,11 +1,12 @@
-import { themeOf } from "@/lib/momentum/dashboard";
+import { dashboardOf, themeOf } from "@/lib/momentum/dashboard";
+import { XpProvider } from "@/lib/momentum/social";
 import { needsOnboarding } from "@/lib/momentum/onboarding";
 import { useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMomentum } from "@/lib/momentum/store";
 import { supabase } from "@/integrations/supabase/client";
 import { AgentTools } from "./AgentTools";
-import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings, Menu, CalendarDays, ListChecks, Zap, Plus } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings, Menu, CalendarDays, ListChecks, Zap, Plus, Users } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ const NAV = [
   { to: "/plan", label: "Study Plan", icon: ListChecks },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/focus", label: "Focus Mode", icon: Timer },
+  { to: "/friends", label: "Friends", icon: Users },
   { to: "/review", label: "Assignment Review", icon: ClipboardCheck },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
@@ -83,6 +85,13 @@ export default function MomentumLayout() {
     document.documentElement.dataset.theme = theme;
     return () => { delete document.documentElement.dataset.theme; };
   }, [theme]);
+  const a11y = dashboardOf(state.dashboard).accessibility!;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.text = a11y.textSize;
+    if (a11y.reducedMotion) root.dataset.motion = "reduce"; else delete root.dataset.motion;
+    return () => { delete root.dataset.text; delete root.dataset.motion; };
+  }, [a11y.textSize, a11y.reducedMotion]);
   const location = useLocation();
   if (!authReady) return null;
   if (!session) return <Navigate to={"/login?next=" + encodeURIComponent(location.pathname + location.search)} replace />;
@@ -90,6 +99,7 @@ export default function MomentumLayout() {
   if (needsOnboarding(state) && location.pathname !== "/welcome") return <Navigate to="/welcome" replace />;
 
   return (
+    <XpProvider>
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar py-6 md:flex">
@@ -127,5 +137,6 @@ export default function MomentumLayout() {
         </main>
       </div>
     </div>
+    </XpProvider>
   );
 }

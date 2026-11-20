@@ -9,7 +9,7 @@ import { useMomentum } from "@/lib/momentum/store";
 import { toast } from "sonner";
 
 export default function Settings() {
-  const { state, dispatch } = useMomentum();
+  const { state, dispatch, commit } = useMomentum();
   const [name, setName] = useState(state.studentName);
   useEffect(() => {
     if (window.location.hash === "#calendars") document.getElementById("calendars")?.scrollIntoView({ behavior: "smooth" });
@@ -64,8 +64,7 @@ export default function Settings() {
             variant="outline"
             className="w-fit"
             onClick={() => {
-              dispatch({ type: "reset" });
-              toast.success("Demo data restored");
+              const save = async () => { try { await commit({ type: "reset" }); toast.success("Demo data restored"); } catch { toast.error("Couldn't restore demo data — check your connection.", { action: { label: "Retry", onClick: () => void save() } }); } }; void save();
             }}
           >
             <RotateCcw className="mr-1.5 h-4 w-4" /> Reset demo data

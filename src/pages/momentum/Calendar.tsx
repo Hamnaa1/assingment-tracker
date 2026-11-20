@@ -36,7 +36,7 @@ const HOURS = Array.from({ length: 17 }, (_, i) => i + 7); // 07:00–23:00
 const HOUR_PX = 48;
 
 export default function CalendarPage() {
-  const { state, dispatch } = useMomentum();
+  const { state, dispatch, commit } = useMomentum();
   const [view, setView] = useState<View>("week");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState<Item | null>(null);
@@ -244,9 +244,7 @@ export default function CalendarPage() {
                     className="text-brand-error-text hover:text-brand-error-text"
                     onClick={() => {
                       if (!window.confirm("Remove this study session from your Momentum calendar?")) return;
-                      dispatch({ type: "deleteStudySession", id: selectedSession.id });
-                      toast.success("Study session removed");
-                      setSelected(null);
+                      const save = async () => { try { await commit({ type: "deleteStudySession", id: selectedSession.id }); toast.success("Study session removed"); setSelected(null); } catch { toast.error("Couldn't remove the session — check your connection.", { action: { label: "Retry", onClick: () => void save() } }); } }; void save();
                     }}
                   >
                     Remove

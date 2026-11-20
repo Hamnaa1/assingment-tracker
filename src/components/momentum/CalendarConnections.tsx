@@ -14,7 +14,7 @@ import { toast } from "sonner";
 const PROVIDERS: CalendarProvider[] = ["google", "outlook", "apple"];
 
 export function CalendarConnections() {
-  const { state, dispatch } = useMomentum();
+  const { state, dispatch, commit } = useMomentum();
   const feeds = state.calendarFeeds ?? [];
   const [connecting, setConnecting] = useState<CalendarProvider | null>(null);
   const [url, setUrl] = useState("");
@@ -98,7 +98,7 @@ export function CalendarConnections() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { dispatch({ type: "removeFeed", id: f.id }); toast.success("Calendar disconnected"); }}>Disconnect</AlertDialogAction>
+                        <AlertDialogAction onClick={() => { const save = async () => { try { await commit({ type: "removeFeed", id: f.id }); toast.success("Calendar disconnected"); } catch { toast.error("Couldn't disconnect the calendar — check your connection.", { action: { label: "Retry", onClick: () => void save() } }); } }; void save(); }}>Disconnect</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

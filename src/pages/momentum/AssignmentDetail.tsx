@@ -448,7 +448,7 @@ export default function AssignmentDetail() {
                     size="icon"
                     className="h-8 w-8 text-brand-error-text hover:text-brand-error-text"
                     aria-label="Delete task"
-                    onClick={() => window.confirm(`Delete “${t.title}”?`) && dispatch({ type: "deleteTask", id: t.id })}
+                    onClick={() => { if (!window.confirm(`Delete “${t.title}”?`)) return; const save = async () => { try { await commit({ type: "deleteTask", id: t.id }); toast.success("Task deleted"); } catch { toast.error("Couldn't delete the task — check your connection.", { action: { label: "Retry", onClick: () => void save() } }); } }; void save(); }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

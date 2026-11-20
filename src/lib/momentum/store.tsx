@@ -210,8 +210,10 @@ export function MomentumProvider({ children }: { children: ReactNode }) {
   // Load this student's saved workspace from the cloud.
   useEffect(() => {
     if (!userId) {
+      // Signed out: drop the previous account's data from memory (saved data stays in the cloud).
       loadedFor.current = null;
       setDataReady(false);
+      dispatch({ type: "hydrate", state: fresh() });
       return;
     }
     if (loadedFor.current === userId) return;

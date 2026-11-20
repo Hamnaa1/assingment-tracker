@@ -4,13 +4,13 @@ import { needsOnboarding } from "@/lib/momentum/onboarding";
 import { useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMomentum } from "@/lib/momentum/store";
-import { supabase } from "@/integrations/supabase/client";
 import { AgentTools } from "./AgentTools";
 import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings, Menu, CalendarDays, ListChecks, Zap, Plus, Users } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePersona } from "./usePersona";
+import { AccountMenu } from "./AccountMenu";
 
 const nav = (v: ReturnType<typeof usePersona>["v"]) => [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -72,9 +72,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
         >
           <Plus className="mr-1.5 h-4 w-4" /> New {v.item}
         </Button>
-        <button className="mt-3 w-full text-xs text-sidebar-foreground hover:text-white" onClick={() => supabase.auth.signOut()}>
-          Sign out
-        </button>
+        <AccountMenu />
       </div>
     </nav>
   );
@@ -96,7 +94,7 @@ export default function MomentumLayout() {
     return () => { delete root.dataset.text; delete root.dataset.motion; };
   }, [a11y.textSize, a11y.reducedMotion]);
   const location = useLocation();
-  if (!authReady) return null;
+  if (!authReady) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading…</div>;
   if (!session) return <Navigate to={"/login?next=" + encodeURIComponent(location.pathname + location.search)} replace />;
   if (!dataReady) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading your workspace…</div>;
   if (needsOnboarding(state) && location.pathname !== "/welcome") return <Navigate to="/welcome" replace />;
@@ -130,6 +128,7 @@ export default function MomentumLayout() {
             </div>
             <span className="text-sm font-extrabold tracking-tight">MOMENTUM</span>
           </div>
+          <div className="ml-auto"><AccountMenu compact /></div>
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">

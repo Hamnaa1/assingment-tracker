@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { reviewWork } from "@/lib/momentum/ai";
+import { reviewWorkAI } from "@/lib/momentum/aiClient";
 import { useMomentum } from "@/lib/momentum/store";
 import { LEVEL_STYLES } from "@/lib/momentum/priority";
 import type { ReviewResult } from "@/lib/momentum/types";
@@ -34,13 +34,15 @@ export default function Review() {
     }
     setRunning(true);
     setResult(null);
-    setTimeout(() => {
-      const r = reviewWork(assignment, submission);
-      dispatch({ type: "addReview", review: r });
-      setResult(r);
-      setRunning(false);
-      toast.success("Review complete", { description: "Scroll down for your rubric breakdown and suggestions." });
-    }, 2000);
+    reviewWorkAI(assignment, submission)
+      .then(({ data: r, source }) => {
+        dispatch({ type: "addReview", review: r });
+        setResult(r);
+        toast.success("Review complete", {
+          description: source === "ai" ? "Scroll down for your rubric breakdown and suggestions." : "AI unavailable — showing an offline estimate.",
+        });
+      })
+      .finally(() => setRunning(false));
   };
 
   const scoreColor = (s: number) => (s >= 75 ? "text-brand-success-text" : s >= 50 ? "text-brand-warning-text" : "text-brand-error-text");
@@ -51,7 +53,7 @@ export default function Review() {
         <h1 className="text-2xl font-extrabold tracking-tight">Momentum Review</h1>
         <p className="text-sm text-muted-foreground">Check your work against the original brief and rubric before you submit.</p>
         <Badge variant="outline" className="mt-2 border-brand-lilac/50 bg-brand-soft-purple text-brand-charcoal">
-          Simulated AI · demo mode — scores are estimates, not guaranteed grades
+          {result?.simulated ? "Offline estimate · AI unavailable" : "AI review"} — scores are estimates, not guaranteed grades
         </Badge>
       </div>
 

@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { analyzeBrief, generatePlan, type BriefAnalysis } from "@/lib/momentum/ai";
+import type { BriefAnalysis } from "@/lib/momentum/ai";
+import { analyzeBriefAI, generatePlanAI, type AiSource } from "@/lib/momentum/aiClient";
 import { AssignmentForm, validateDraft } from "@/components/momentum/AssignmentForm";
 import { useMomentum } from "@/lib/momentum/store";
 import type { Assignment } from "@/lib/momentum/types";
@@ -40,6 +41,7 @@ export default function Planner() {
   const [analysing, setAnalysing] = useState(false);
   const [analysis, setAnalysis] = useState<BriefAnalysis | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [source, setSource] = useState<AiSource | null>(null);
 
   const runAnalysis = (text: string) => {
     if (text.trim().length < 40) {
@@ -47,12 +49,18 @@ export default function Planner() {
       return;
     }
     setAnalysing(true);
-    // Simulated AI latency for a realistic experience.
-    setTimeout(() => {
-      setAnalysis(analyzeBrief(text));
-      setAnalysing(false);
-      toast.success("Brief analysed", { description: "Review the extracted details, edit anything, then generate your plan." });
-    }, 1200);
+    analyzeBriefAI(text)
+      .then(({ data, source }) => {
+        setAnalysis(data);
+        setSource(source);
+        toast.success("Brief analysed", {
+          description:
+            source === "ai"
+              ? "Review the extracted details, edit anything, then generate your plan."
+              : "AI unavailable — used offline extraction. Double-check the details.",
+        });
+      })
+      .finally(() => setAnalysing(false));
   };
 
   const onFile = async (file: File) => {
@@ -78,7 +86,7 @@ export default function Planner() {
     }
   };
 
-  const generate = () => {
+  const generate = async () => {
     if (!analysis) return;
     const err = validateDraft(analysis);
     if (err) {
@@ -86,19 +94,19 @@ export default function Planner() {
       return;
     }
     setGenerating(true);
-    setTimeout(() => {
-      const assignment: Assignment = {
-        ...analysis, // the student's corrected details, not the raw extraction
-        id: uid(),
-        briefText: brief,
-        createdAt: new Date().toISOString(),
-      };
-      const tasks = generatePlan(assignment);
-      dispatch({ type: "addAssignment", assignment, tasks });
-      setGenerating(false);
-      toast.success("Your plan is ready", { description: `${tasks.length} personalised tasks created for "${assignment.title}".` });
-      navigate(`/assignments/${assignment.id}`);
-    }, 1500);
+    const assignment: Assignment = {
+      ...analysis, // the student's corrected details, not the raw extraction
+      id: uid(),
+      briefText: brief,
+      createdAt: new Date().toISOString(),
+    };
+    const { data: tasks, source: planSource } = await generatePlanAI(assignment);
+    dispatch({ type: "addAssignment", assignment, tasks });
+    setGenerating(false);
+    toast.success("Your plan is ready", {
+      description: `${tasks.length} ${planSource === "ai" ? "AI-generated" : "personalised"} tasks created for "${assignment.title}".`,
+    });
+    navigate(`/assignments/${assignment.id}`);
   };
 
   return (
@@ -109,7 +117,7 @@ export default function Planner() {
           Paste or upload your brief — Momentum extracts the details and builds a personalised plan.
         </p>
         <Badge variant="outline" className="mt-2 border-brand-lilac/50 bg-brand-soft-purple text-brand-charcoal">
-          Simulated AI · demo mode
+          {source === "fallback" ? "Offline mode · AI unavailable, using built-in extraction" : "AI-powered · always check the extracted details"}
         </Badge>
       </div>
 

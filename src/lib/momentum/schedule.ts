@@ -10,6 +10,44 @@ export interface SchedulePrefs {
   bufferMinutes: number; // break around every busy block and between sessions
   maxSessionMinutes: number; // longest single sitting
   maxDailyMinutes: number; // most study the student wants per day
+  /** Times of day the student prefers; the scheduler fills these first each day. Empty = no preference. */
+  preferredTimes?: StudyPeriod[];
+}
+
+export type StudyPeriod = "morning" | "afternoon" | "evening";
+export const STUDY_PERIODS: Record<StudyPeriod, { label: string; start: number; end: number }> = {
+  morning: { label: "Morning (6–12)", start: 6, end: 12 },
+  afternoon: { label: "Afternoon (12–17)", start: 12, end: 17 },
+  evening: { label: "Evening (17–23)", start: 17, end: 23 },
+};
+
+/** Splits free windows so, within each day, preferred-time segments are tried before the rest. */
+export function preferenceOrder(windows: Interval[], prefs: SchedulePrefs): Interval[] {
+  const pref = prefs.preferredTimes ?? [];
+  if (!pref.length) return windows;
+  const out: Interval[] = [];
+  let i = 0;
+  while (i < windows.length) {
+    const key = dayKey(windows[i].start);
+    const preferred: Interval[] = [];
+    const rest: Interval[] = [];
+    for (; i < windows.length && dayKey(windows[i].start) === key; i++) {
+      const w = windows[i];
+      const base = new Date(w.start); base.setHours(0, 0, 0, 0);
+      const ranges = pref.map((p) => ({ start: base.getTime() + STUDY_PERIODS[p].start * 3600000, end: base.getTime() + STUDY_PERIODS[p].end * 3600000 })).sort((a, b) => a.start - b.start);
+      let cursor = w.start;
+      for (const r of ranges) {
+        const s = Math.max(r.start, w.start), e = Math.min(r.end, w.end);
+        if (e <= s) continue;
+        if (s > cursor) rest.push({ start: cursor, end: s });
+        preferred.push({ start: s, end: e });
+        cursor = Math.max(cursor, e);
+      }
+      if (cursor < w.end) rest.push({ start: cursor, end: w.end });
+    }
+    out.push(...preferred, ...rest);
+  }
+  return out;
 }
 
 export const DEFAULT_PREFS: SchedulePrefs = {
@@ -81,7 +119,7 @@ export function findSlot(
   usedPerDay?: Map<string, number>,
 ): Interval | null {
   const q = 15 * MIN;
-  for (const w of freeWindows(from, to, busy, prefs)) {
+  for (const w of preferenceOrder(freeWindows(from, to, busy, prefs), prefs)) {
     if (usedPerDay && (usedPerDay.get(dayKey(w.start)) ?? 0) + minutes > prefs.maxDailyMinutes) continue;
     const start = Math.ceil(w.start / q) * q;
     if (start + minutes * MIN <= w.end) return { start, end: start + minutes * MIN };

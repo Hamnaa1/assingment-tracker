@@ -6,6 +6,7 @@ import { seedDemoData } from "./demoData";
 import type { ScheduleLogEntry } from "./engine";
 import type { PriorityWeights } from "./priority";
 import type { SchedulePrefs } from "./schedule";
+import type { DashboardPrefs } from "./dashboard";
 
 interface State {
   assignments: Assignment[];
@@ -19,6 +20,7 @@ interface State {
   availability?: SchedulePrefs;
   priorityWeights?: PriorityWeights;
   scheduleLog?: ScheduleLogEntry[];
+  dashboard?: DashboardPrefs;
 }
 
 type Action =
@@ -40,6 +42,7 @@ type Action =
   | { type: "removeFeed"; id: string }
   | { type: "setAvailability"; availability: SchedulePrefs }
   | { type: "setWeights"; weights: PriorityWeights }
+  | { type: "setDashboard"; dashboard: DashboardPrefs; availability?: SchedulePrefs }
   | { type: "applyReschedule"; sessions: StudySession[]; removeIds: string[]; taskUpdates: Task[]; log: ScheduleLogEntry }
   | { type: "reset" }
   | { type: "hydrate"; state: State };
@@ -90,6 +93,8 @@ function reducer(state: State, action: Action): State {
     }
     case "setAvailability":
       return { ...state, availability: action.availability };
+    case "setDashboard":
+      return { ...state, dashboard: action.dashboard, availability: action.availability ?? state.availability };
     case "setWeights":
       return { ...state, priorityWeights: action.weights };
     case "applyReschedule": {

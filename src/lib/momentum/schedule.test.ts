@@ -106,3 +106,15 @@ describe("availability, behind detection and rescheduling", () => {
     expect(r.log.changes[0]).toContain("overdue");
   });
 });
+
+describe("schedule safety", () => {
+  test("sessions never overlap, have positive length and end before a timed deadline", () => {
+    const now = new Date("2099-01-01T08:00:00");
+    const tasks = [1, 2, 3].map((i) => ({ id: `t${i}`, assignmentId: "a", title: `T${i}`, estimatedMinutes: 120, dueDate: "2099-01-04", completed: false })) as never;
+    const r = planSchedule({ tasks, assignments: [{ id: "a", deadline: "2099-01-04", deadlineTime: "12:00" }] }, [], now);
+    const iv = r.sessions.map((s) => [new Date(s.start).getTime(), new Date(s.end).getTime()]).sort((x, y) => x[0] - y[0]);
+    expect(iv.length).toBeGreaterThan(0);
+    iv.forEach(([a, b], i) => { expect(b).toBeGreaterThan(a); if (i) expect(a).toBeGreaterThanOrEqual(iv[i - 1][1]); });
+    expect(Math.max(...iv.map((x) => x[1]))).toBeLessThanOrEqual(new Date("2099-01-04T12:00:00").getTime());
+  });
+});

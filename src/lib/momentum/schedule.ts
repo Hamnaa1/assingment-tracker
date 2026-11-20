@@ -138,7 +138,7 @@ export interface ScheduleResult {
 
 export interface PlanInput {
   tasks: Task[];
-  assignments: Pick<Assignment, "id" | "deadline">[];
+  assignments: (Pick<Assignment, "id" | "deadline"> & { deadlineTime?: string })[];
   /** Higher = schedule first when tasks compete for the same time. */
   priority?: Record<string, number>;
 }
@@ -151,7 +151,7 @@ export interface PlanInput {
  * task per day, never over busy time, and never past the daily cap.
  */
 export function planSchedule(input: PlanInput, busy: Interval[], now = new Date(), prefs: SchedulePrefs = DEFAULT_PREFS): ScheduleResult {
-  const deadlines = new Map(input.assignments.map((a) => [a.id, new Date(a.deadline + "T23:59:00")]));
+  const deadlines = new Map(input.assignments.map((a) => [a.id, new Date(`${a.deadline}T${a.deadlineTime ?? "23:59"}:00`)]));
   const prio = input.priority ?? {};
   const pending = input.tasks
     .filter((t) => !t.completed && t.estimatedMinutes > 0 && deadlines.has(t.assignmentId))

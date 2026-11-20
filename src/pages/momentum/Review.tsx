@@ -99,7 +99,7 @@ export default function Review() {
                 <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="44" fill="none" stroke="#e5e3ed" strokeWidth="7" />
                   <circle
-                    cx="50" cy="50" r="44" fill="none" stroke="#8875e8" strokeWidth="7" strokeLinecap="round"
+                    cx="50" cy="50" r="44" fill="none" stroke="var(--brand-lavender)" strokeWidth="7" strokeLinecap="round"
                     strokeDasharray={`${2 * Math.PI * 44}`}
                     strokeDashoffset={`${2 * Math.PI * 44 * (1 - result.readinessScore / 100)}`}
                   />

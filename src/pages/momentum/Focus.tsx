@@ -208,7 +208,7 @@ export default function Focus() {
           <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="46" fill="none" stroke="#3a3749" strokeWidth="4" />
             <circle
-              cx="50" cy="50" r="46" fill="none" stroke="#8875e8" strokeWidth="4" strokeLinecap="round"
+              cx="50" cy="50" r="46" fill="none" stroke="var(--brand-lavender)" strokeWidth="4" strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 46}`}
               strokeDashoffset={`${2 * Math.PI * 46 * (1 - progress / 100)}`}
               className="transition-all duration-1000"

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { themeOf } from "@/lib/momentum/dashboard";
+import { useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMomentum } from "@/lib/momentum/store";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,7 +76,12 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function MomentumLayout() {
   const [open, setOpen] = useState(false);
-  const { session, authReady, dataReady } = useMomentum();
+  const { session, authReady, dataReady, state } = useMomentum();
+  const theme = themeOf(state.dashboard);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    return () => { delete document.documentElement.dataset.theme; };
+  }, [theme]);
   const location = useLocation();
   if (!authReady) return null;
   if (!session) return <Navigate to={"/login?next=" + encodeURIComponent(location.pathname + location.search)} replace />;

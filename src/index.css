@@ -52,6 +52,36 @@
     --sidebar-ring: #8875e8;
   }
 
+  /* Student colour themes (Customise Dashboard). Success/warning/error stay fixed. */
+  :root, :root[data-theme="lavender"] {
+    --brand-lavender: #9670d4;
+    --brand-lilac: #c3aef0;
+    --brand-soft-purple: #ede4ff;
+    --brand-soft-white: #f8f5ff;
+    --color-background: #f8f5ff;
+    --color-muted: #f8f5ff;
+    --color-primary: #9670d4;
+    --color-secondary: #ede4ff;
+    --color-accent: #ede4ff;
+    --color-ring: #9670d4;
+    --sidebar-primary: #9670d4;
+    --sidebar-ring: #9670d4;
+  }
+  :root[data-theme="sky"] {
+    --brand-lavender: #5689dc;
+    --brand-lilac: #a9c6f2;
+    --brand-soft-purple: #dfebff;
+    --brand-soft-white: #f4f8ff;
+    --color-background: #f4f8ff;
+    --color-muted: #f4f8ff;
+    --color-primary: #5689dc;
+    --color-secondary: #dfebff;
+    --color-accent: #dfebff;
+    --color-ring: #5689dc;
+    --sidebar-primary: #5689dc;
+    --sidebar-ring: #5689dc;
+  }
+
   .dark {
     --color-background: #242330;
     --color-foreground: #f7f6fc;

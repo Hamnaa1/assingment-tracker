@@ -22,6 +22,14 @@ export const WIDGETS: Record<WidgetId, { label: string; description: string }> =
 };
 export const ALL_WIDGETS = Object.keys(WIDGETS) as WidgetId[];
 
+export type ColourTheme = "lavender" | "sky";
+export const DEFAULT_THEME: ColourTheme = "lavender";
+export const THEMES: Record<ColourTheme, { label: string; primary: string; secondary: string; background: string; charcoal: string }> = {
+  lavender: { label: "Lavender Purple", primary: "#9670D4", secondary: "#EDE4FF", background: "#F8F5FF", charcoal: "#242330" },
+  sky: { label: "Sky Blue", primary: "#5689DC", secondary: "#DFEBFF", background: "#F4F8FF", charcoal: "#242330" },
+};
+export const themeOf = (d?: Partial<DashboardPrefs>): ColourTheme => (d?.theme && d.theme in THEMES ? d.theme : DEFAULT_THEME);
+
 export interface StudyGoals {
   weeklyHours: number;
   dailyTasks: number;
@@ -33,6 +41,7 @@ export interface DashboardPrefs {
   order: WidgetId[];
   hidden: WidgetId[];
   goals: StudyGoals;
+  theme?: ColourTheme;
 }
 
 export interface Habits {
@@ -53,7 +62,7 @@ export const DEFAULT_DASHBOARD: DashboardPrefs = { preset: "detailed", mode: "de
 export function dashboardOf(saved?: Partial<DashboardPrefs>): DashboardPrefs {
   const d = { ...DEFAULT_DASHBOARD, ...(saved ?? {}), goals: { ...DEFAULT_DASHBOARD.goals, ...(saved?.goals ?? {}) } };
   const order = d.order.filter((w) => ALL_WIDGETS.includes(w));
-  return { ...d, order: [...order, ...ALL_WIDGETS.filter((w) => !order.includes(w))], hidden: d.hidden.filter((w) => ALL_WIDGETS.includes(w)) };
+  return { ...d, theme: themeOf(d), order: [...order, ...ALL_WIDGETS.filter((w) => !order.includes(w))], hidden: d.hidden.filter((w) => ALL_WIDGETS.includes(w)) };
 }
 
 export const visibleWidgets = (d: DashboardPrefs) => d.order.filter((w) => !d.hidden.includes(w));

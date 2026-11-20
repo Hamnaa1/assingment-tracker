@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { applyPreset, dashboardOf, moveWidget, visibleWidgets, withHabits } from "./dashboard";
+import { applyPreset, dashboardOf, themeOf, moveWidget, visibleWidgets, withHabits } from "./dashboard";
 import { DEFAULT_PREFS, planSchedule } from "./schedule";
 import type { Task } from "./types";
 
@@ -36,5 +36,19 @@ describe("study habits drive the scheduler", () => {
   });
   test("without a preference the earliest free time is used", () => {
     expect(new Date(plan(DEFAULT_PREFS, 60).sessions[0].start).getHours()).toBe(9);
+  });
+});
+
+describe("colour theme", () => {
+  test("defaults to Lavender Purple and keeps a saved Sky Blue choice", () => {
+    expect(dashboardOf().theme).toBe("lavender");
+    expect(dashboardOf({ theme: "sky" }).theme).toBe("sky");
+  });
+  test("unknown saved themes fall back to the default", () => {
+    expect(themeOf({ theme: "neon" as never })).toBe("lavender");
+  });
+  test("two students' themes are independent", () => {
+    const a = dashboardOf({ theme: "sky" }), b = dashboardOf({});
+    expect([a.theme, b.theme]).toEqual(["sky", "lavender"]);
   });
 });

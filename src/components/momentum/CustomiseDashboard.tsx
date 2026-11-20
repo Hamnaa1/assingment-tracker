@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useMomentum } from "@/lib/momentum/store";
 import { prefsOf } from "@/lib/momentum/engine";
-import { PRESETS, WIDGETS, applyPreset, dashboardOf, habitsOf, moveWidget, withHabits, type DashboardPreset, type DashboardPrefs, type Habits } from "@/lib/momentum/dashboard";
+import { DEFAULT_THEME, THEMES, themeOf, type ColourTheme, PRESETS, WIDGETS, applyPreset, dashboardOf, habitsOf, moveWidget, withHabits, type DashboardPreset, type DashboardPrefs, type Habits } from "@/lib/momentum/dashboard";
 import { STUDY_PERIODS, type StudyPeriod } from "@/lib/momentum/schedule";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,6 +25,12 @@ export function CustomiseDashboard({ open, onOpenChange }: { open: boolean; onOp
   const custom = (d: DashboardPrefs) => setDash({ ...d, preset: "custom" });
   const pickPreset = (p: DashboardPreset) => { const r = applyPreset(dash, p); setDash(r.dashboard); setHabits({ ...habits, ...r.habits }); };
   const togglePeriod = (p: StudyPeriod) => setHabits({ ...habits, preferredTimes: habits.preferredTimes.includes(p) ? habits.preferredTimes.filter((x) => x !== p) : [...habits.preferredTimes, p] });
+
+  const pickTheme = (theme: ColourTheme) => {
+    setDash({ ...dash, theme });
+    // Applied and saved straight away so the whole app recolours immediately.
+    dispatch({ type: "setDashboard", dashboard: { ...dashboardOf(state.dashboard), theme } });
+  };
 
   const save = () => {
     if (dash.hidden.length === dash.order.length) return toast.error("Keep at least one widget on your dashboard");
@@ -51,6 +57,27 @@ export function CustomiseDashboard({ open, onOpenChange }: { open: boolean; onOp
                 <p className="mt-1 text-xs text-muted-foreground">{PRESETS[p].description}</p>
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-2" aria-labelledby="cd-theme">
+          <div className="flex items-center justify-between">
+            <h3 id="cd-theme" className="text-sm font-bold">Colour Theme</h3>
+            <Button type="button" size="sm" variant="ghost" disabled={themeOf(dash) === DEFAULT_THEME} onClick={() => pickTheme(DEFAULT_THEME)}>Reset to default</Button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Colour theme">
+            {(Object.keys(THEMES) as ColourTheme[]).map((t) => {
+              const th = THEMES[t], on = themeOf(dash) === t;
+              return (
+                <button key={t} type="button" role="radio" aria-checked={on} onClick={() => pickTheme(t)}
+                  className={cn("rounded-lg border p-3 text-left transition-colors hover:border-brand-lavender", on && "border-2 border-brand-lavender")}>
+                  <div className="flex h-10 overflow-hidden rounded-md border" aria-hidden>
+                    {[th.primary, th.secondary, th.background, th.charcoal].map((c) => <span key={c} className="flex-1" style={{ backgroundColor: c }} />)}
+                  </div>
+                  <p className="mt-2 flex items-center gap-1.5 text-sm font-bold">{on && <Check className="h-3.5 w-3.5 text-brand-lavender" />}{th.label}{t === DEFAULT_THEME && <span className="text-xs font-normal text-muted-foreground">(default)</span>}</p>
+                </button>
+              );
+            })}
           </div>
         </section>
 

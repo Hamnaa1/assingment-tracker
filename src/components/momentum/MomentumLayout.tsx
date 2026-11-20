@@ -1,4 +1,5 @@
 import { themeOf } from "@/lib/momentum/dashboard";
+import { needsOnboarding } from "@/lib/momentum/onboarding";
 import { useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMomentum } from "@/lib/momentum/store";
@@ -86,6 +87,7 @@ export default function MomentumLayout() {
   if (!authReady) return null;
   if (!session) return <Navigate to={"/login?next=" + encodeURIComponent(location.pathname + location.search)} replace />;
   if (!dataReady) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading your workspace…</div>;
+  if (needsOnboarding(state) && location.pathname !== "/welcome") return <Navigate to="/welcome" replace />;
 
   return (
     <div className="flex min-h-screen bg-background">

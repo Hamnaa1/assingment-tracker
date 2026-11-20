@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,18 @@ export default function Settings() {
           >
             Save
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Make Momentum Yours</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            {state.onboarding?.status === "completed" ? "Retake the questionnaire to update your theme, dashboard and study habits. You'll confirm before anything changes." : "Answer a few questions and we'll set up your Study Plan and schedule for you."}
+          </p>
+          <Button asChild variant="outline" className="w-fit"><Link to="/welcome"><Sparkles className="mr-1.5 h-4 w-4" />{state.onboarding?.status === "completed" ? "Retake onboarding" : "Start onboarding"}</Link></Button>
         </CardContent>
       </Card>
 

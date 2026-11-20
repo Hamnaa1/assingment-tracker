@@ -126,7 +126,7 @@ export async function reviewWorkAI(assignment: Assignment, submission: string): 
     }
     if (byName.size === 0) throw new Error("AI review missing rubric");
     const rubricBreakdown = assignment.rubric.map((c, i) => {
-      const hit = byName.get(c.criterion.toLowerCase());
+      const hit = byName.get((str(c.criterion, 120) ?? "").toLowerCase());
       return hit ? { criterion: c.criterion, ...hit } : local.rubricBreakdown[i];
     });
     const totalWeight = assignment.rubric.reduce((s, c) => s + c.weight, 0) || 100;

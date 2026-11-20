@@ -61,8 +61,21 @@ export default function Planner() {
       const text = await file.text();
       setBrief(text);
       runAnalysis(text);
+    } else if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      try {
+        const { extractPdfText } = await import("@/lib/momentum/pdf");
+        const text = await extractPdfText(file);
+        if (!text) {
+          toast.error("No text found in this PDF", { description: "It may be a scanned image. Try pasting the brief text instead." });
+          return;
+        }
+        setBrief(text);
+        runAnalysis(text);
+      } catch {
+        toast.error("Couldn't read this PDF", { description: "Try another file or paste the brief text." });
+      }
     } else {
-      toast.error("Unsupported file", { description: "Demo mode accepts .txt / .md files — or just paste the brief text." });
+      toast.error("Unsupported file", { description: "Upload a PDF, .txt or .md file — or just paste the brief text." });
     }
   };
 
@@ -130,7 +143,7 @@ export default function Planner() {
                 {analysing ? "Analysing…" : "Analyse brief"}
               </Button>
               <Button variant="outline" onClick={() => fileRef.current?.click()}>
-                <FileUp className="mr-1.5 h-4 w-4" /> Upload .txt
+                <FileUp className="mr-1.5 h-4 w-4" /> Upload PDF or .txt
               </Button>
               <Button variant="ghost" className="text-brand-lavender" onClick={() => setBrief(SAMPLE)}>
                 Try a sample brief
@@ -138,9 +151,9 @@ export default function Planner() {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".txt,.md,text/plain"
+                accept=".pdf,application/pdf,.txt,.md,text/plain"
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
               />
             </div>
           </CardContent>

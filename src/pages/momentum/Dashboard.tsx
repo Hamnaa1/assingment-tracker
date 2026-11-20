@@ -169,6 +169,25 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <div>
+            <SectionTitle title="Make Momentum Yours" />
+            <Card className="border-border/80 shadow-sm">
+              <CardContent className="flex flex-col gap-3 p-4">
+                <p className="text-sm text-muted-foreground">
+                  {state.onboarding?.status === "completed"
+                    ? "Change whether you're a student or professional, your goals, focus habits, theme and dashboard. You'll confirm before anything changes."
+                    : `Answer a few questions and we'll set up your ${v.plan} and schedule for you.`}
+                </p>
+                <Button asChild variant="outline" className="w-fit">
+                  <Link to="/welcome">
+                    <Sparkles className="mr-1.5 h-4 w-4" />
+                    {state.onboarding?.status === "completed" ? "Edit my preferences" : "Start onboarding"}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

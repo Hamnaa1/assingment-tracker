@@ -1,0 +1,2 @@
+- Momentum data is stored per user as one JSON document in `public.momentum_state` (RLS: owner only); the client reducer hydrates from and debounce-saves to it, and MCP tools read-modify-write the same document — keeps one source of truth for app and agents.
+- External agents use the OAuth-protected MCP server in `src/lib/mcp/` (consent at `/.lovable/oauth/consent`); browser-local WebMCP tools live in `src/components/momentum/AgentTools.tsx` — never add service-role access to MCP tools.

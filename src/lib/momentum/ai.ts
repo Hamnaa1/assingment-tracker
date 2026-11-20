@@ -15,7 +15,15 @@ export interface BriefAnalysis {
   sections: string[];
   referencingStyle?: string;
   instructions?: string;
+  type?: string;
+  description?: string;
+  deadlineTime?: string;
+  learningOutcomes?: string[];
+  assessmentCriteria?: string[];
+  submissionFormat?: string;
 }
+
+export const ASSIGNMENT_TYPES = ["Essay", "Report", "Presentation", "Case study", "Dissertation", "Portfolio", "Project", "Reflective piece", "Exam", "Other"];
 
 /**
  * Simulated AI brief analysis (demo mode). Extracts structured assignment
@@ -117,7 +125,35 @@ export function analyzeBrief(text: string): BriefAnalysis {
 
   const instructions = lines.find((l) => /must|should|ensure|required/i.test(l) && l.length > 40)?.slice(0, 200);
 
-  return { title, module, deadline, wordCount, weighting, difficulty: difficulty as 1 | 2 | 3 | 4 | 5, deliverables, rubric, sections, referencingStyle, instructions };
+  // Type, time, description, outcomes, criteria and format.
+  const type = ASSIGNMENT_TYPES.find((t) => lower.includes(t.toLowerCase())) ?? (lower.includes("reflect") ? "Reflective piece" : "Essay");
+  const timeMatch = text.match(/(?:deadline|due|submit)[^\n]*?\b(\d{1,2})[:.](\d{2})\s*(am|pm)?/i);
+  let deadlineTime: string | undefined;
+  if (timeMatch) {
+    let h = parseInt(timeMatch[1]);
+    if (timeMatch[3]?.toLowerCase() === "pm" && h < 12) h += 12;
+    if (timeMatch[3]?.toLowerCase() === "am" && h === 12) h = 0;
+    if (h < 24) deadlineTime = `${String(h).padStart(2, "0")}:${timeMatch[2]}`;
+  }
+  const description = lines.slice(1).find((l) => l.length > 60 && !/:\s*\d/.test(l))?.slice(0, 400);
+  const listAfter = (heading: RegExp) => {
+    const i = lines.findIndex((l) => heading.test(l));
+    if (i < 0) return [];
+    const out: string[] = [];
+    for (const l of lines.slice(i + 1)) {
+      if (/^[A-Za-z ]{3,40}:\s*$/.test(l)) break;
+      if (!/^[-•*\d.)]/.test(l) && out.length > 0) break;
+      out.push(l.replace(/^[-•*\d.)\s]+/, "").trim());
+      if (out.length >= 8) break;
+    }
+    return out.filter(Boolean);
+  };
+  const learningOutcomes = listAfter(/learning outcomes?/i);
+  const assessmentCriteria = listAfter(/assessment criteria|marking criteria/i);
+  const formatMatch = text.match(/(?:submission format|submit (?:as|via)|format)\s*[:\-]?\s*([^\n]{3,80})/i);
+  const submissionFormat = formatMatch ? formatMatch[1].trim() : lower.includes("pdf") ? "PDF" : lower.includes("turnitin") ? "Turnitin upload" : undefined;
+
+  return { type, description, deadlineTime, learningOutcomes, assessmentCriteria, submissionFormat, title, module, deadline, wordCount, weighting, difficulty: difficulty as 1 | 2 | 3 | 4 | 5, deliverables, rubric, sections, referencingStyle, instructions };
 }
 
 /**

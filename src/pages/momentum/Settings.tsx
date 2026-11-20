@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CalendarConnections } from "@/components/momentum/CalendarConnections";
 import { useMomentum } from "@/lib/momentum/store";
 import { toast } from "sonner";
 
 export default function Settings() {
   const { state, dispatch } = useMomentum();
   const [name, setName] = useState(state.studentName);
+  useEffect(() => {
+    if (window.location.hash === "#calendars") document.getElementById("calendars")?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -39,13 +43,22 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <Card id="calendars" className="scroll-mt-6 border-border/80 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Connected calendars</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CalendarConnections />
+        </CardContent>
+      </Card>
+
       <Card className="border-border/80 shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">Demo data</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            Momentum stores everything locally in your browser. Reset to restore the original demo assignments, tasks and focus sessions.
+            Your workspace is saved to your account. Reset to restore the original demo assignments, tasks and focus sessions.
           </p>
           <Button
             variant="outline"
@@ -70,8 +83,7 @@ export default function Settings() {
           </p>
           <p>
             An AI-powered student productivity and accountability platform. Brief analysis, plan generation, distraction
-            blocking, evidence verification and assignment review are simulated demo features in this build; your data
-            never leaves this browser.
+            blocking, evidence verification and assignment review are simulated demo features in this build. Calendar links are read-only and stored only in your account.
           </p>
         </CardContent>
       </Card>

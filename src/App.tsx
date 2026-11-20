@@ -1,3 +1,4 @@
+import CalendarPage from "./pages/momentum/Calendar";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/assignments/:id" element={<AssignmentDetail />} />
               <Route path="/planner" element={<Planner />} />
+              <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/focus" element={<Focus />} />
               <Route path="/review" element={<Review />} />
               <Route path="/settings" element={<Settings />} />

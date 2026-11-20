@@ -4,10 +4,9 @@ import { FileUp, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { analyzeBrief, generatePlan, type BriefAnalysis } from "@/lib/momentum/ai";
+import { AssignmentForm, validateDraft } from "@/components/momentum/AssignmentForm";
 import { useMomentum } from "@/lib/momentum/store";
 import type { Assignment } from "@/lib/momentum/types";
 import { toast } from "sonner";
@@ -81,25 +80,16 @@ export default function Planner() {
 
   const generate = () => {
     if (!analysis) return;
-    if (!analysis.title.trim()) {
-      toast.error("Assignment title is required");
+    const err = validateDraft(analysis);
+    if (err) {
+      toast.error(err);
       return;
     }
     setGenerating(true);
     setTimeout(() => {
       const assignment: Assignment = {
+        ...analysis, // the student's corrected details, not the raw extraction
         id: uid(),
-        title: analysis.title,
-        module: analysis.module,
-        deadline: analysis.deadline,
-        wordCount: analysis.wordCount,
-        weighting: analysis.weighting,
-        difficulty: analysis.difficulty,
-        deliverables: analysis.deliverables,
-        rubric: analysis.rubric,
-        sections: analysis.sections,
-        referencingStyle: analysis.referencingStyle,
-        instructions: analysis.instructions,
         briefText: brief,
         createdAt: new Date().toISOString(),
       };
@@ -162,7 +152,7 @@ export default function Planner() {
         {/* Extracted details */}
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">2 · Review extracted details</CardTitle>
+            <CardTitle className="text-lg">2 · Review & edit details</CardTitle>
           </CardHeader>
           <CardContent>
             {!analysis ? (
@@ -174,82 +164,7 @@ export default function Planner() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 flex flex-col gap-1.5">
-                  <Label>Title</Label>
-                  <Input value={analysis.title} onChange={(e) => setAnalysis({ ...analysis, title: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Module</Label>
-                  <Input value={analysis.module} onChange={(e) => setAnalysis({ ...analysis, module: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Deadline</Label>
-                  <Input type="date" value={analysis.deadline} onChange={(e) => setAnalysis({ ...analysis, deadline: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Word count</Label>
-                  <Input
-                    type="number"
-                    value={analysis.wordCount ?? ""}
-                    onChange={(e) => setAnalysis({ ...analysis, wordCount: parseInt(e.target.value) || undefined })}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Weighting (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={analysis.weighting ?? ""}
-                    onChange={(e) => setAnalysis({ ...analysis, weighting: parseInt(e.target.value) || undefined })}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Difficulty (1–5)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={analysis.difficulty}
-                    onChange={(e) => setAnalysis({ ...analysis, difficulty: Math.min(5, Math.max(1, parseInt(e.target.value) || 3)) as 1 | 2 | 3 | 4 | 5 })}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Referencing style</Label>
-                  <Input
-                    value={analysis.referencingStyle ?? ""}
-                    placeholder="e.g. Harvard"
-                    onChange={(e) => setAnalysis({ ...analysis, referencingStyle: e.target.value || undefined })}
-                  />
-                </div>
-                <div className="col-span-2 flex flex-col gap-1.5">
-                  <Label>Sections (comma separated)</Label>
-                  <Input
-                    value={analysis.sections.join(", ")}
-                    onChange={(e) => setAnalysis({ ...analysis, sections: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
-                  />
-                </div>
-                <div className="col-span-2 flex flex-col gap-1.5">
-                  <Label>Rubric (criterion: weight%, one per line)</Label>
-                  <Textarea
-                    rows={4}
-                    value={analysis.rubric.map((r) => `${r.criterion}: ${r.weight}%`).join("\n")}
-                    onChange={(e) =>
-                      setAnalysis({
-                        ...analysis,
-                        rubric: e.target.value
-                          .split("\n")
-                          .map((l) => {
-                            const m = l.match(/(.+?)\s*:\s*(\d{1,3})/);
-                            return m ? { criterion: m[1].trim(), weight: parseInt(m[2]) } : null;
-                          })
-                          .filter((r): r is { criterion: string; weight: number } => !!r),
-                      })
-                    }
-                  />
-                </div>
-              </div>
+              <AssignmentForm value={analysis} onChange={setAnalysis} />
             )}
           </CardContent>
         </Card>

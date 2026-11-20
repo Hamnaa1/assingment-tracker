@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { Assignment, FocusSession, ReviewResult, Task } from "./types";
+import type { Assignment, CalendarEvent, CalendarFeed, FocusSession, ReviewResult, StudySession, Task } from "./types";
 import { seedDemoData } from "./demoData";
 
 interface State {
@@ -10,6 +10,9 @@ interface State {
   sessions: FocusSession[];
   reviews: ReviewResult[];
   studentName: string;
+  studySessions?: StudySession[];
+  calendarFeeds?: CalendarFeed[];
+  calendarEvents?: CalendarEvent[];
 }
 
 type Action =
@@ -23,6 +26,12 @@ type Action =
   | { type: "addSession"; session: FocusSession }
   | { type: "addReview"; review: ReviewResult }
   | { type: "setName"; name: string }
+  | { type: "replaceTasks"; assignmentId: string; tasks: Task[] }
+  | { type: "addStudySessions"; sessions: StudySession[]; replaceIds?: string[] }
+  | { type: "updateStudySession"; session: StudySession }
+  | { type: "deleteStudySession"; id: string }
+  | { type: "upsertFeed"; feed: CalendarFeed; events?: CalendarEvent[] }
+  | { type: "removeFeed"; id: string }
   | { type: "reset" }
   | { type: "hydrate"; state: State };
 
@@ -39,6 +48,42 @@ function reducer(state: State, action: Action): State {
         ...state,
         assignments: state.assignments.filter((a) => a.id !== action.id),
         tasks: state.tasks.filter((t) => t.assignmentId !== action.id),
+        studySessions: (state.studySessions ?? []).filter((s) => s.assignmentId !== action.id),
+      };
+    case "replaceTasks": {
+      // Keep completed tasks; swap the rest for the regenerated plan.
+      const keep = state.tasks.filter((t) => t.assignmentId !== action.assignmentId || t.completed);
+      const keptIds = new Set(keep.map((t) => t.id));
+      return {
+        ...state,
+        tasks: [...keep, ...action.tasks],
+        studySessions: (state.studySessions ?? []).filter((s) => s.assignmentId !== action.assignmentId || !s.taskId || keptIds.has(s.taskId)),
+      };
+    }
+    case "addStudySessions": {
+      const drop = new Set(action.replaceIds ?? []);
+      return { ...state, studySessions: [...(state.studySessions ?? []).filter((s) => !drop.has(s.id)), ...action.sessions] };
+    }
+    case "updateStudySession":
+      return { ...state, studySessions: (state.studySessions ?? []).map((s) => (s.id === action.session.id ? action.session : s)) };
+    case "deleteStudySession":
+      return { ...state, studySessions: (state.studySessions ?? []).filter((s) => s.id !== action.id) };
+    case "upsertFeed": {
+      const feeds = state.calendarFeeds ?? [];
+      const exists = feeds.some((f) => f.id === action.feed.id);
+      return {
+        ...state,
+        calendarFeeds: exists ? feeds.map((f) => (f.id === action.feed.id ? action.feed : f)) : [...feeds, action.feed],
+        calendarEvents: action.events
+          ? [...(state.calendarEvents ?? []).filter((e) => e.feedId !== action.feed.id), ...action.events]
+          : state.calendarEvents,
+      };
+    }
+    case "removeFeed":
+      return {
+        ...state,
+        calendarFeeds: (state.calendarFeeds ?? []).filter((f) => f.id !== action.id),
+        calendarEvents: (state.calendarEvents ?? []).filter((e) => e.feedId !== action.id),
       };
     case "addTask":
       return { ...state, tasks: [...state.tasks, action.task] };
@@ -54,7 +99,11 @@ function reducer(state: State, action: Action): State {
         ),
       };
     case "deleteTask":
-      return { ...state, tasks: state.tasks.filter((t) => t.id !== action.id) };
+      return {
+        ...state,
+        tasks: state.tasks.filter((t) => t.id !== action.id),
+        studySessions: (state.studySessions ?? []).filter((s) => s.taskId !== action.id),
+      };
     case "addSession":
       return { ...state, sessions: [...state.sessions, action.session] };
     case "addReview":
@@ -65,7 +114,7 @@ function reducer(state: State, action: Action): State {
       return action.state;
     case "reset": {
       const seed = seedDemoData();
-      return { ...state, ...seed, reviews: [] };
+      return { ...state, ...seed, reviews: [], studySessions: [] };
     }
   }
 }

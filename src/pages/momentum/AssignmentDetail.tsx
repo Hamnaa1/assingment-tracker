@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarClock, Check, Flag, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarClock, CalendarPlus, CalendarRange, Check, Flag, Pencil, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { AssignmentForm, draftFromAssignment, validateDraft, type AssignmentDraft } from "@/components/momentum/AssignmentForm";
+import { ScheduleDialog } from "@/components/momentum/ScheduleDialog";
+import { generatePlan } from "@/lib/momentum/ai";
+import { busyIntervals, scheduleTasks, type ScheduleResult } from "@/lib/momentum/schedule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -102,10 +106,16 @@ function TaskDialog({ assignmentId, task, onDone }: { assignmentId: string; task
 export default function AssignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { dispatch } = useMomentum();
+  const { state, dispatch } = useMomentum();
   const { assignment, tasks } = useAssignment(id);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | undefined>();
+  const [draft, setDraft] = useState<AssignmentDraft | null>(null);
+  const [planStale, setPlanStale] = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<Task | null>(null);
+  const [preview, setPreview] = useState<ScheduleResult | null>(null);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const sessions = useMemo(() => (state.studySessions ?? []).filter((s) => s.assignmentId === id), [state.studySessions, id]);
 
   const sorted = useMemo(() => [...tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)), [tasks]);
 
@@ -125,6 +135,40 @@ export default function AssignmentDetail() {
   const overdueTasks = sorted.filter((t) => !t.completed && t.dueDate < new Date().toISOString().slice(0, 10));
 
   const behind = overdueTasks.length > 0;
+  const nowIso = new Date().toISOString();
+  const futureSessions = sessions.filter((s) => s.start > nowIso);
+  const otherSessions = (state.studySessions ?? []).filter((s) => s.assignmentId !== assignment.id || s.start <= nowIso);
+  const availability = scheduleTasks(tasks, assignment.deadline, busyIntervals(state.calendarEvents ?? [], otherSessions, 15));
+  const tight = availability.unscheduledMinutes > 0;
+
+  const saveEdits = () => {
+    if (!draft) return;
+    const err = validateDraft(draft);
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    dispatch({ type: "updateAssignment", assignment: { ...assignment, ...draft } });
+    setDraft(null);
+    setPlanStale(true);
+    toast.success("Assignment saved", { description: "Regenerate your plan to use the updated details." });
+  };
+
+  const regenerate = () => {
+    const doneTitles = new Set(tasks.filter((t) => t.completed).map((t) => t.title.toLowerCase()));
+    const next = generatePlan(assignment).filter((t) => !doneTitles.has(t.title.toLowerCase()));
+    dispatch({ type: "replaceTasks", assignmentId: assignment.id, tasks: next });
+    setPlanStale(false);
+    setRegenOpen(false);
+    toast.success("Plan regenerated", { description: "Completed tasks were kept. Re-run “Schedule around my calendar” to book new sessions." });
+  };
+
+  const confirmSchedule = () => {
+    if (!preview) return;
+    dispatch({ type: "addStudySessions", sessions: preview.sessions, replaceIds: futureSessions.map((s) => s.id) });
+    setPreview(null);
+    toast.success(`${preview.sessions.length} study sessions scheduled`, { description: "See them on your Calendar page." });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,14 +191,19 @@ export default function AssignmentDetail() {
             {assignment.referencingStyle ? ` · ${assignment.referencingStyle.toUpperCase()} referencing` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setDraft(draftFromAssignment(assignment))} disabled={!!draft}>
+            <Pencil className="mr-1.5 h-4 w-4" /> Edit Assignment
+          </Button>
           <Button asChild variant="secondary" className="bg-brand-soft-purple text-brand-charcoal hover:bg-brand-lilac/60">
             <Link to={`/focus?assignment=${assignment.id}`}>Start focus session</Link>
           </Button>
           <Button
             variant="outline"
             className="text-brand-error hover:text-brand-error"
+            aria-label="Delete assignment"
             onClick={() => {
+              if (!window.confirm(`Delete “${assignment.title}” and its tasks and study sessions?`)) return;
               dispatch({ type: "deleteAssignment", id: assignment.id });
               toast.success("Assignment deleted");
               navigate("/assignments");
@@ -164,6 +213,85 @@ export default function AssignmentDetail() {
           </Button>
         </div>
       </div>
+
+      {draft && (
+        <Card className="border-brand-lavender/40 shadow-sm">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg">Edit assignment</CardTitle>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button>
+              <Button className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={saveEdits}>Save Changes</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <AssignmentForm value={draft} onChange={setDraft} />
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDraft(null)}>Cancel</Button>
+              <Button className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={saveEdits}>Save Changes</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {planStale && !draft && (
+        <Card className="border-brand-lavender/30 bg-brand-soft-purple/60 shadow-sm">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="text-sm text-brand-charcoal"><span className="font-bold">Details updated.</span> Regenerate the plan so tasks match your corrected brief. Completed tasks are kept.</p>
+            <Button size="sm" className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={regenerate}><RefreshCw className="mr-1.5 h-4 w-4" /> Regenerate plan</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!draft && (
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Assignment details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
+            <Detail label="Type" value={assignment.type} />
+            <Detail label="Deadline" value={`${new Date(assignment.deadline + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "long", year: "numeric" })}${assignment.deadlineTime ? ` · ${assignment.deadlineTime}` : ""}`} />
+            <Detail label="Difficulty" value={`${assignment.difficulty} / 5`} />
+            <Detail label="Submission format" value={assignment.submissionFormat} />
+            <Detail className="sm:col-span-2" label="Description" value={assignment.description} />
+            <ListDetail label="Required tasks" items={assignment.deliverables} />
+            <ListDetail label="Required sections" items={assignment.sections} />
+            <ListDetail label="Learning outcomes" items={assignment.learningOutcomes} />
+            <ListDetail label="Assessment criteria" items={assignment.assessmentCriteria} />
+            <ListDetail label="Rubric" items={assignment.rubric.map((r) => `${r.criterion} — ${r.weight}%`)} />
+            <Detail label="Lecturer instructions" value={assignment.instructions} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Calendar-aware scheduling */}
+      <Card className={cn("shadow-sm", tight ? "border-brand-warning/40 bg-brand-warning/10" : "border-border/80")}>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <CalendarRange className={cn("mt-0.5 h-5 w-5 shrink-0", tight ? "text-brand-warning" : "text-brand-lavender")} />
+            <div className="text-sm">
+              <p className="font-bold">
+                {tight
+                  ? `Not enough free time: about ${Math.round(availability.unscheduledMinutes / 6) / 10}h of work won't fit before the deadline.`
+                  : `${Math.round(availability.availableMinutes / 6) / 10}h free before the deadline for ${Math.round(availability.neededMinutes / 6) / 10}h of remaining work.`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {tight
+                  ? "Try shortening task estimates, moving commitments, or starting earlier each day."
+                  : (state.calendarFeeds ?? []).length
+                    ? "Based on your connected calendar and study hours (9:00–21:00)."
+                    : "Connect a calendar in Settings so this accounts for your lectures, shifts and plans."}
+                {futureSessions.length > 0 && ` · ${futureSessions.length} upcoming session${futureSessions.length > 1 ? "s" : ""} booked.`}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setRegenOpen(true)}><RefreshCw className="mr-1.5 h-4 w-4" /> Regenerate plan</Button>
+            <Button size="sm" className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={() => setPreview(scheduleTasks(tasks, assignment.deadline, busyIntervals(state.calendarEvents ?? [], otherSessions, 15)))}>
+              <CalendarPlus className="mr-1.5 h-4 w-4" /> Schedule around my calendar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Priority explanation + progress */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -276,9 +404,20 @@ export default function AssignmentDetail() {
                     {overdue ? "Overdue · " : ""}Due {new Date(t.dueDate).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                     {t.estimatedMinutes > 0 ? ` · ~${t.estimatedMinutes}min` : ""}
                   </p>
+                  {sessions.filter((s) => s.taskId === t.id).map((s) => (
+                    <p key={s.id} className="ml-8 mt-1 inline-flex items-center gap-1 rounded bg-brand-soft-purple px-1.5 py-0.5 text-[11px] font-semibold text-brand-charcoal">
+                      <CalendarClock className="h-3 w-3" />
+                      {new Date(s.start).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  ))}
                 </div>
 
                 <div className="flex shrink-0 items-start gap-1">
+                  {!t.completed && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Schedule study session" title="Schedule study session" onClick={() => setScheduleFor(t)}>
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -296,7 +435,7 @@ export default function AssignmentDetail() {
                     size="icon"
                     className="h-8 w-8 text-brand-error hover:text-brand-error"
                     aria-label="Delete task"
-                    onClick={() => dispatch({ type: "deleteTask", id: t.id })}
+                    onClick={() => window.confirm(`Delete “${t.title}”?`) && dispatch({ type: "deleteTask", id: t.id })}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -306,6 +445,82 @@ export default function AssignmentDetail() {
           })}
         </CardContent>
       </Card>
+
+      <Dialog open={!!scheduleFor} onOpenChange={(o) => !o && setScheduleFor(null)}>
+        {scheduleFor && <ScheduleDialog key={scheduleFor.id} assignment={assignment} task={scheduleFor} onDone={() => setScheduleFor(null)} />}
+      </Dialog>
+
+      <Dialog open={regenOpen} onOpenChange={setRegenOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Regenerate plan?</DialogTitle>
+            <DialogDescription>Momentum rebuilds unfinished tasks from your saved assignment details. Completed tasks stay; sessions booked for replaced tasks are removed.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRegenOpen(false)}>Cancel</Button>
+            <Button className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={regenerate}>Regenerate</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        {preview && (
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Proposed study sessions</DialogTitle>
+              <DialogDescription>
+                Planned in your free time, with breaks around existing events.
+                {futureSessions.length > 0 && ` Confirming replaces the ${futureSessions.length} upcoming session${futureSessions.length > 1 ? "s" : ""} already booked for this assignment.`}
+              </DialogDescription>
+            </DialogHeader>
+            {preview.unscheduledMinutes > 0 && (
+              <p className="rounded-lg bg-brand-warning/15 p-2.5 text-xs font-semibold">
+                About {Math.round(preview.unscheduledMinutes / 6) / 10}h couldn't fit before the deadline. Consider reducing scope or freeing up time.
+              </p>
+            )}
+            {preview.sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing to schedule — all tasks are done or have no time estimate.</p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {preview.sessions.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-3 rounded-md border px-2.5 py-1.5 text-sm">
+                    <span className="truncate font-semibold">{s.title}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {new Date(s.start).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {Math.round((Date.parse(s.end) - Date.parse(s.start)) / 60000)}m
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setPreview(null)}>Cancel</Button>
+              <Button disabled={preview.sessions.length === 0} className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={confirmSchedule}>Confirm schedule</Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+    </div>
+  );
+}
+
+function Detail({ label, value, className }: { label: string; value?: string; className?: string }) {
+  return (
+    <div className={className}>
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 whitespace-pre-line", !value && "italic text-muted-foreground")}>{value || "Not set"}</p>
+    </div>
+  );
+}
+
+function ListDetail({ label, items }: { label: string; items?: string[] }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      {items && items.length ? (
+        <ul className="mt-0.5 list-disc pl-4">{items.map((i, k) => <li key={k}>{i}</li>)}</ul>
+      ) : (
+        <p className="mt-0.5 italic text-muted-foreground">None added</p>
+      )}
     </div>
   );
 }

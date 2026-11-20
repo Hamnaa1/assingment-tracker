@@ -17,7 +17,13 @@ export interface Assignment {
   rubric: RubricCriterion[];
   sections: string[];
   referencingStyle?: string;
-  instructions?: string;
+  instructions?: string; // additional lecturer instructions
+  type?: string; // essay, report, presentation...
+  description?: string;
+  deadlineTime?: string; // HH:mm, local
+  learningOutcomes?: string[];
+  assessmentCriteria?: string[];
+  submissionFormat?: string;
   briefText: string;
   createdAt: string;
 }
@@ -75,4 +81,40 @@ export interface ReviewResult {
   missing: string[];
   suggestions: ReviewSuggestion[];
   simulated: true;
+}
+
+/** A study session scheduled by Momentum, linked to an assignment and task. */
+export interface StudySession {
+  id: string;
+  assignmentId: string;
+  taskId?: string;
+  title: string;
+  start: string; // ISO datetime
+  end: string; // ISO datetime
+  description?: string;
+  reminderMinutes: number;
+}
+
+export type CalendarProvider = "google" | "outlook" | "apple" | "other";
+
+/** A read-only calendar subscription (private iCal/ICS link). */
+export interface CalendarFeed {
+  id: string;
+  provider: CalendarProvider;
+  label: string;
+  url: string;
+  lastSyncedAt?: string;
+  status: "ok" | "error" | "pending";
+  error?: string;
+}
+
+/** An event read from a connected calendar feed. */
+export interface CalendarEvent {
+  id: string;
+  feedId: string;
+  title: string;
+  start: string; // ISO datetime
+  end: string; // ISO datetime
+  allDay: boolean;
+  location?: string;
 }

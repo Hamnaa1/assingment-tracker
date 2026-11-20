@@ -69,7 +69,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           <span className="mt-1.5 inline-block rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold">{role}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => navigate("/friends")}><UserRound className="mr-2 h-4 w-4" />Edit public profile</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/settings")}><UserRound className="mr-2 h-4 w-4" />Edit public profile</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate("/welcome")}><Settings className="mr-2 h-4 w-4" />Edit my preferences</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={logOut} className="text-destructive focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Log out</DropdownMenuItem>

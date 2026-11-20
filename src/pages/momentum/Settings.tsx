@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarConnections } from "@/components/momentum/CalendarConnections";
 import { useMomentum } from "@/lib/momentum/store";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -34,8 +35,26 @@ export default function Settings() {
           <Button
             className="w-fit bg-brand-lavender text-white hover:bg-brand-lavender/90"
             onClick={() => {
-              dispatch({ type: "setName", name: name.trim() || "Alex" });
-              toast.success("Saved");
+              const save = async () => {
+                const trimmed = name.trim() || "Alex";
+                dispatch({ type: "setName", name: trimmed });
+                // Keep the public display name (leaderboard, friends, account menu) in sync.
+                const { data: p } = await supabase.rpc("ensure_profile");
+                if (p) {
+                  const row = p as { username: string; avatar: string; leaderboard_opt_in: boolean; share_focus: boolean; share_streak: boolean };
+                  const { error } = await supabase.rpc("update_my_profile", {
+                    p_username: row.username,
+                    p_display_name: trimmed,
+                    p_avatar: row.avatar,
+                    p_opt_in: row.leaderboard_opt_in,
+                    p_share_focus: row.share_focus,
+                    p_share_streak: row.share_streak,
+                  });
+                  if (error) { toast.error("Saved here, but your public name didn't update — check your connection."); return; }
+                }
+                toast.success("Saved");
+              };
+              void save();
             }}
           >
             Save

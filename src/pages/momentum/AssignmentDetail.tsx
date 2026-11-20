@@ -107,7 +107,7 @@ function TaskDialog({ assignmentId, task, onDone }: { assignmentId: string; task
 export default function AssignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { state, dispatch } = useMomentum();
+  const { state, dispatch, commit } = useMomentum();
   const { assignment, tasks } = useAssignment(id);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | undefined>();
@@ -209,9 +209,16 @@ export default function AssignmentDetail() {
             aria-label="Delete assignment"
             onClick={() => {
               if (!window.confirm(`Delete “${assignment.title}” and its tasks and study sessions?`)) return;
-              dispatch({ type: "deleteAssignment", id: assignment.id });
-              toast.success("Assignment deleted");
-              navigate("/assignments");
+              const del = async () => {
+                try {
+                  await commit({ type: "deleteAssignment", id: assignment.id });
+                  toast.success("Assignment deleted");
+                  navigate("/assignments");
+                } catch {
+                  toast.error("Couldn't delete — your connection or account session may have dropped.", { action: { label: "Retry", onClick: () => void del() } });
+                }
+              };
+              void del();
             }}
           >
             <Trash2 className="h-4 w-4" />

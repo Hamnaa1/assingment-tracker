@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Assignment, CalendarEvent, CalendarFeed, FocusSession, ReviewResult, StudySession, Task } from "./types";
@@ -163,9 +163,13 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-function fresh(): State {
-  return { ...seedDemoData(), reviews: [], studentName: "Alex" };
+// New accounts start empty — demo data is only added when the user asks for it (Settings → Reset demo data).
+export function fresh(): State {
+  return { assignments: [], tasks: [], sessions: [], reviews: [], studySessions: [], studentName: "Student" };
 }
+
+export { reducer as momentumReducer };
+export type { State as MomentumState, Action as MomentumAction };
 
 function legacyLocal(): State | null {
   try {
@@ -183,6 +187,8 @@ interface Ctx {
   session: Session | null;
   authReady: boolean;
   dataReady: boolean;
+  /** Apply a change and save it straight away. Rolls back and throws if the save fails. */
+  commit: (action: Action) => Promise<void>;
 }
 
 const MomentumContext = createContext<Ctx | null>(null);
@@ -194,6 +200,10 @@ export function MomentumProvider({ children }: { children: ReactNode }) {
   const [dataReady, setDataReady] = useState(false);
   const loadedFor = useRef<string | null>(null);
   const userId = session?.user.id ?? null;
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  // Last state confirmed saved; while local state differs, cloud reloads must not overwrite it.
+  const savedRef = useRef<State | null>(null);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -229,6 +239,7 @@ export function MomentumProvider({ children }: { children: ReactNode }) {
         await supabase.from("momentum_state").upsert({ user_id: userId, data: next as never });
       }
       loadedFor.current = userId;
+      savedRef.current = next;
       dispatch({ type: "hydrate", state: next });
       setDataReady(true);
     })();
@@ -240,12 +251,14 @@ export function MomentumProvider({ children }: { children: ReactNode }) {
   // Save changes back (debounced).
   useEffect(() => {
     if (!userId || !dataReady || loadedFor.current !== userId) return;
+    if (savedRef.current === state) return;
     const t = setTimeout(() => {
       supabase
         .from("momentum_state")
         .upsert({ user_id: userId, data: state as never, updated_at: new Date().toISOString() })
         .then(({ error }) => {
           if (error) return console.error("Save failed", error.message);
+          if (stateRef.current === state) savedRef.current = state;
           // The server checks the saved workspace and awards any XP/achievements earned.
           const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
           supabase.rpc("sync_xp", { p_tz: tz }).then(({ data, error: e }) => {
@@ -261,14 +274,41 @@ export function MomentumProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId || !dataReady) return;
     const onFocus = async () => {
+      // Unsaved local edits win: reloading now would undo them (e.g. a delete confirmed in a dialog).
+      if (savedRef.current !== stateRef.current) return;
       const { data } = await supabase.from("momentum_state").select("data").eq("user_id", userId).maybeSingle();
-      if (data?.data && (data.data as unknown as State).assignments) dispatch({ type: "hydrate", state: data.data as unknown as State });
+      if (savedRef.current !== stateRef.current) return;
+      if (data?.data && (data.data as unknown as State).assignments) {
+        const next = data.data as unknown as State;
+        savedRef.current = next;
+        dispatch({ type: "hydrate", state: next });
+      }
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [userId, dataReady]);
 
-  const value = useMemo(() => ({ state, dispatch, session, authReady, dataReady }), [state, session, authReady, dataReady]);
+  const commit = useCallback(
+    async (action: Action) => {
+      const prev = stateRef.current;
+      const next = reducer(prev, action);
+      dispatch({ type: "hydrate", state: next });
+      if (!userId) return;
+      const { error } = await supabase
+        .from("momentum_state")
+        .upsert({ user_id: userId, data: next as never, updated_at: new Date().toISOString() });
+      if (error) {
+        dispatch({ type: "hydrate", state: prev });
+        throw new Error(error.message);
+      }
+      savedRef.current = next;
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      supabase.rpc("sync_xp", { p_tz: tz }).then(({ data }) => window.dispatchEvent(new CustomEvent("momentum:xp", { detail: data })));
+    },
+    [userId],
+  );
+
+  const value = useMemo(() => ({ state, dispatch, session, authReady, dataReady, commit }), [state, session, authReady, dataReady, commit]);
   return <MomentumContext.Provider value={value}>{children}</MomentumContext.Provider>;
 }
 

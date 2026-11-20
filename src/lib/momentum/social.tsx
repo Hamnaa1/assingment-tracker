@@ -28,7 +28,7 @@ export function XpProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<XpTx[]>([]);
   const [achievements, setAchievements] = useState<XpCtx["achievements"]>([]);
-  const [rewards, setRewards] = useState(Object.fromEntries(Object.entries(DEFAULT_REWARDS).map(([k, v]) => [k, v.amount])) as Record<RewardReason, number>);
+  const [rewards] = useState(Object.fromEntries(Object.entries(DEFAULT_REWARDS).map(([k, v]) => [k, v.amount])) as Record<RewardReason, number>);
   const [celebrate, setCelebrate] = useState(false);
   const notif = dashboardOf(state.dashboard).notifications!;
   const notifRef = useRef(notif);
@@ -37,16 +37,14 @@ export function XpProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const [{ data: p }, { data: t }, { data: a }, { data: r }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: a }] = await Promise.all([
       supabase.rpc("ensure_profile"),
       supabase.from("xp_transactions").select("amount, reason, ref, activity_at").eq("user_id", userId).order("activity_at"),
       supabase.from("student_achievements").select("achievement, unlocked_at").eq("user_id", userId),
-      supabase.from("xp_rewards").select("reason, amount"),
     ]);
     if (p) setProfile(p as Profile);
     setTxs(t ?? []);
     setAchievements(a ?? []);
-    if (r?.length) setRewards((cur) => ({ ...cur, ...Object.fromEntries(r.map((x) => [x.reason, x.amount])) }));
   }, [userId]);
 
   useEffect(() => {

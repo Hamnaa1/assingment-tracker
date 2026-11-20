@@ -18,3 +18,29 @@ describe("deleting an assignment", () => {
     expect(fresh().assignments.length).toBe(0);
   });
 });
+
+describe("task management", () => {
+  const base = () => ({ ...fresh(),
+    assignments: [{ id: "a", deadline: "2099-01-10" }] as never,
+    tasks: [{ id: "t1", assignmentId: "a", title: "Draft intro", completed: false }] as never,
+    studySessions: [
+      { id: "s1", assignmentId: "a", taskId: "t1", start: "2099-01-05T10:00" },
+      { id: "s2", assignmentId: "a", taskId: "t1", start: "2099-01-20T10:00" },
+      { id: "s3", assignmentId: "a", taskId: "t1", start: "2099-01-21T10:00", locked: true },
+    ] as never });
+  test("adding a task with the same title twice is ignored", () => {
+    const n = momentumReducer(base(), { type: "addTask", task: { id: "t2", assignmentId: "a", title: " draft INTRO " } as never });
+    expect(n.tasks.length).toBe(1);
+  });
+  test("completing a task removes its upcoming unlocked sessions; reopening keeps one task", () => {
+    const n = momentumReducer(base(), { type: "toggleTask", id: "t1" });
+    expect((n.studySessions ?? []).map((s) => s.id)).toEqual(["s3"]);
+    const r = momentumReducer(n, { type: "toggleTask", id: "t1" });
+    expect(r.tasks.length).toBe(1);
+    expect(r.tasks[0].completed).toBe(false);
+  });
+  test("moving a deadline earlier drops unlocked sessions after it", () => {
+    const n = momentumReducer(base(), { type: "updateAssignment", assignment: { id: "a", deadline: "2099-01-10" } as never });
+    expect((n.studySessions ?? []).map((s) => s.id)).toEqual(["s1", "s3"]);
+  });
+});

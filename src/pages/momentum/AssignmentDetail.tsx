@@ -16,14 +16,14 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAssignment, useMomentum } from "@/lib/momentum/store";
+import { isDuplicateTask, useAssignment, useMomentum } from "@/lib/momentum/store";
 import { LEVEL_STYLES, completionPct, computePriority, daysUntil } from "@/lib/momentum/priority";
 import type { PriorityLevel, Task } from "@/lib/momentum/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 function TaskDialog({ assignmentId, task, onDone }: { assignmentId: string; task?: Task; onDone: () => void }) {
-  const { dispatch } = useMomentum();
+  const { state, dispatch } = useMomentum();
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [minutes, setMinutes] = useState(task?.estimatedMinutes ?? 60);
@@ -39,6 +39,10 @@ function TaskDialog({ assignmentId, task, onDone }: { assignmentId: string; task
       dispatch({ type: "updateTask", task: { ...task, title, description, estimatedMinutes: minutes, dueDate, priority } });
       toast.success("Task updated");
     } else {
+      if (isDuplicateTask(state.tasks, { id: "", assignmentId, title } as Task)) {
+        toast.error("This task already exists");
+        return;
+      }
       dispatch({
         type: "addTask",
         task: {
@@ -153,7 +157,7 @@ export default function AssignmentDetail() {
     dispatch({ type: "updateAssignment", assignment: { ...assignment, ...draft } });
     setDraft(null);
     setPlanStale(true);
-    toast.success("Assignment saved", { description: "Regenerate your plan to use the updated details." });
+    toast.success("Assignment saved", { description: "Priorities updated everywhere. Regenerate your plan to use the new details; completed tasks are kept." });
   };
 
   const regenerate = async () => {

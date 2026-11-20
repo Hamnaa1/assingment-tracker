@@ -53,12 +53,29 @@ type Action =
 
 const STORAGE_KEY = "momentum-state-v1";
 
+/** Same id, or an open task with the same title in the same assignment. */
+export function isDuplicateTask(tasks: Task[], task: Task) {
+  const title = task.title.trim().toLowerCase();
+  return tasks.some((t) => t.id === task.id || (t.assignmentId === task.assignmentId && !t.completed && t.title.trim().toLowerCase() === title));
+}
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "addAssignment":
       return { ...state, assignments: [...state.assignments, action.assignment], tasks: [...state.tasks, ...action.tasks] };
-    case "updateAssignment":
-      return { ...state, assignments: state.assignments.map((a) => (a.id === action.assignment.id ? action.assignment : a)) };
+    case "updateAssignment": {
+      // Drop unlocked future sessions that now fall after the (possibly earlier) deadline.
+      const a = action.assignment;
+      const limit = `${a.deadline}T${(a as { deadlineTime?: string }).deadlineTime ?? "23:59"}`;
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        assignments: state.assignments.map((x) => (x.id === a.id ? a : x)),
+        studySessions: (state.studySessions ?? []).filter(
+          (s) => s.assignmentId !== a.id || s.locked || s.start <= now || s.start.slice(0, 16) <= limit,
+        ),
+      };
+    }
     case "deleteAssignment":
       return {
         ...state,
@@ -129,19 +146,29 @@ function reducer(state: State, action: Action): State {
         calendarFeeds: (state.calendarFeeds ?? []).filter((f) => f.id !== action.id),
         calendarEvents: (state.calendarEvents ?? []).filter((e) => e.feedId !== action.id),
       };
-    case "addTask":
+    case "addTask": {
+      if (isDuplicateTask(state.tasks, action.task)) return state;
       return { ...state, tasks: [...state.tasks, action.task] };
+    }
     case "updateTask":
       return { ...state, tasks: state.tasks.map((t) => (t.id === action.task.id ? action.task : t)) };
-    case "toggleTask":
+    case "toggleTask": {
+      const t0 = state.tasks.find((t) => t.id === action.id);
+      const completing = !!t0 && !t0.completed;
+      const now = new Date().toISOString();
       return {
         ...state,
+        // Finished tasks no longer need upcoming (unlocked) sessions.
+        studySessions: completing
+          ? (state.studySessions ?? []).filter((s) => s.taskId !== action.id || s.locked || s.start <= now)
+          : state.studySessions,
         tasks: state.tasks.map((t) =>
           t.id === action.id
             ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : undefined }
             : t,
         ),
       };
+    }
     case "deleteTask":
       return {
         ...state,

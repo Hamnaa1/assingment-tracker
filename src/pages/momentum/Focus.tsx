@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { usePersona } from "@/components/momentum/usePersona";
+import { focusTip } from "@/lib/momentum/persona";
+import { prefsOf } from "@/lib/momentum/engine";
 import { Camera, CheckCircle2, ImagePlus, Instagram, Loader2, Lock, LockOpen, Pause, Play, ShieldAlert, Timer, Unlock, XCircle, Youtube } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,7 @@ type Phase = "setup" | "active" | "intervention" | "proof" | "verifying" | "unlo
 
 export default function Focus() {
   const { state, dispatch } = useMomentum();
+  const { profile } = usePersona();
   const [params] = useSearchParams();
 
   const [assignmentId, setAssignmentId] = useState(params.get("assignment") ?? "");
@@ -124,6 +128,7 @@ export default function Focus() {
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">Momentum Focus</h1>
           <p className="text-sm text-muted-foreground">Distraction-free deep work, with accountability built in.</p>
+          <p className="mt-2 rounded-lg bg-brand-soft-purple/60 px-3 py-2 text-sm text-brand-charcoal"><span className="font-bold">Tip for you:</span> {focusTip(profile, prefsOf(state).maxSessionMinutes)}</p>
         </div>
 
         {phase === "done" && (

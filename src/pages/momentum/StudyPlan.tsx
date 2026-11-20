@@ -21,6 +21,8 @@ import { DEFAULT_WEIGHTS, FACTOR_LABELS, LEVEL_STYLES, normaliseWeights, type Pr
 import { DEFAULT_PREFS, type SchedulePrefs } from "@/lib/momentum/schedule";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { usePersona } from "@/components/momentum/usePersona";
+
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -29,6 +31,7 @@ const fromTime = (t: string) => { const [h, m] = t.split(":").map(Number); retur
 
 export default function StudyPlan() {
   const { state, dispatch } = useMomentum();
+  const { v } = usePersona();
   const [prefs, setPrefs] = useState<SchedulePrefs>(prefsOf(state));
   const [weights, setWeights] = useState<PriorityWeights>(weightsOf(state));
   const [proposal, setProposal] = useState<RescheduleResult | null>(null);
@@ -305,8 +308,8 @@ export default function StudyPlan() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Study Plan</h1>
-          <p className="text-sm text-muted-foreground">Your priorities, availability and a realistic schedule across every assignment.</p>
+          <h1 className="text-2xl font-extrabold tracking-tight">{v.plan}</h1>
+          <p className="text-sm text-muted-foreground">Your priorities, availability and a realistic schedule across every {v.item}.</p>
           <p className="mt-1 text-xs text-muted-foreground"><Badge variant="outline" className="mr-2 border-brand-lavender/40 text-brand-lavender">{dash.preset === "custom" ? "Custom" : PRESETS[dash.preset].label}</Badge>{habitsSummary}</p>
         </div>
         <div className="flex flex-wrap gap-2">

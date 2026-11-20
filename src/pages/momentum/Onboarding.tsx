@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Briefcase, Check, GraduationCap, Sparkles } from "lucide-react";
+import { STRUGGLES, VOCAB, type Struggle } from "@/lib/momentum/persona";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,16 @@ export default function Onboarding() {
   const [confirm, setConfirm] = useState(false);
   const { commit, dialog } = usePlanCommit();
   const set = (p: Partial<OnboardingAnswers>) => setA((x) => ({ ...x, ...p }));
+  const pro = a.persona === "professional";
+  const v = VOCAB[pro ? "professional" : "student"];
+  const toggleStruggle = (k: Struggle) => setA((x) => {
+    const cur = x.struggles ?? [];
+    const next = cur.includes(k) ? cur.filter((y) => y !== k) : [...cur, k];
+    const wantsSupport = next.includes("distraction") || next.includes("starting");
+    const base = { ...x, struggles: next };
+    if (wantsSupport && !x.focusSupport) return withFocusSupport(base);
+    return { ...base, focusSupport: wantsSupport };
+  });
 
   // Live theme preview while onboarding; restore the saved theme on leave.
   useEffect(() => { document.documentElement.dataset.theme = a.theme; }, [a.theme]);
@@ -53,6 +64,84 @@ export default function Onboarding() {
   const hasExisting = !!(state.dashboard || state.availability);
 
   const steps: { title: string; sub: string; body: ReactNode }[] = [
+    { title: "Welcome to Momentum", sub: "Let's tailor Momentum to you. First, which best describes you?", body: (
+      <div role="radiogroup" aria-label="I am a" className="grid gap-3 sm:grid-cols-2">
+        <Choice selected={pro === false} onClick={() => set({ persona: "student" })} title="Student" desc="Assignments, modules, coursework and revision.">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft-purple"><GraduationCap className="h-5 w-5 text-brand-lavender" /></span>
+        </Choice>
+        <Choice selected={pro} onClick={() => set({ persona: "professional" })} title="Professional" desc="Projects, deliverables, action items and priorities.">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft-purple"><Briefcase className="h-5 w-5 text-brand-lavender" /></span>
+        </Choice>
+      </div>) },
+    pro
+      ? { title: "Tell us about your work", sub: "Optional — it helps us word suggestions for you.", body: (
+        <div className="flex flex-col gap-1.5"><Label htmlFor="ob-role">Job role or industry (optional)</Label>
+          <Input id="ob-role" placeholder="e.g. Product designer, marketing" maxLength={80} value={a.role ?? ""} onChange={(e) => set({ role: e.target.value })} /></div>) }
+      : { title: "Tell us about your studies", sub: "We'll use this to word your plan and suggestions.", body: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5"><Label htmlFor="ob-subject">Course or subject</Label>
+            <Input id="ob-subject" placeholder="e.g. BSc Psychology" maxLength={80} value={a.subject ?? ""} onChange={(e) => set({ subject: e.target.value })} /></div>
+          <div className="flex flex-col gap-1.5"><Label htmlFor="ob-level">Year or level (optional)</Label>
+            <Input id="ob-level" placeholder="e.g. Year 2" maxLength={40} value={a.level ?? ""} onChange={(e) => set({ level: e.target.value })} /></div>
+        </div>) },
+    { title: "What gets in your way?", sub: "Pick any that apply. Choosing distraction or starting tasks turns on focus support (shorter sessions, regular breaks).", body: (
+      <div className="grid gap-3 sm:grid-cols-2">
+        {(Object.keys(STRUGGLES) as Struggle[]).map((k) => { const on = (a.struggles ?? []).includes(k); return (
+          <button key={k} type="button" aria-pressed={on} onClick={() => toggleStruggle(k)}
+            className={cn("flex flex-col gap-1 rounded-xl border-2 bg-card p-4 text-left transition-all hover:border-brand-lavender focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "border-brand-lavender bg-brand-soft-purple/60" : "border-border")}>
+            <span className="flex items-center gap-1.5 text-sm font-bold">{on && <Check className="h-4 w-4 text-brand-lavender" />}{STRUGGLES[k].label}</span>
+            <span className="text-xs text-muted-foreground">{STRUGGLES[k].desc}</span>
+          </button>); })}
+      </div>) },
+    { title: pro ? "How long do you like to focus in one go?" : "How long do you like to study in one go?", sub: "Your scheduler won't plan sittings longer than this.", body: (
+      <div role="radiogroup" aria-label="Session length" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[25, 45, 60, 90].map((m) => <Choice key={m} selected={a.sessionMinutes === m} onClick={() => set({ sessionMinutes: m })} title={`${m} min`} desc={m === 25 ? "Pomodoro" : m === 90 ? "Deep work" : undefined} />)}
+      </div>) },
+    { title: "How often do you want breaks?", sub: "A break is added after every session.", body: (
+      <div role="radiogroup" aria-label="Break length" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[5, 10, 15, 20].map((m) => <Choice key={m} selected={a.breakMinutes === m} onClick={() => set({ breakMinutes: m })} title={`${m} min break`} desc={`every ${sessionLength(a)} min`} />)}
+      </div>) },
+    { title: pro ? "When are you available for focused work?" : "When are you free to study?", sub: "Sessions are only scheduled inside these windows.", body: (
+      <div className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-2">
+          {ORDER.map((i) => { const d = a.days[i]; return (
+            <li key={i} className="flex flex-wrap items-center gap-3 rounded-lg border bg-card px-3 py-2">
+              <Switch checked={!!d} aria-label={`${pro ? "Work" : "Study"} on ${DAY_NAMES[i]}`} onCheckedChange={(on) => set({ days: a.days.map((x, j) => (j === i ? (on ? { start: 9, end: 18 } : null) : x)) })} />
+              <span className="w-24 text-sm font-semibold">{DAY_NAMES[i]}</span>
+              {d ? (<>
+                <Input type="time" aria-label={`${DAY_NAMES[i]} start`} className="w-32" value={toTime(d.start)} onChange={(e) => set({ days: a.days.map((x, j) => (j === i ? { ...d, start: fromTime(e.target.value) } : x)) })} />
+                <span className="text-sm text-muted-foreground">to</span>
+                <Input type="time" aria-label={`${DAY_NAMES[i]} end`} className="w-32" value={toTime(d.end)} onChange={(e) => set({ days: a.days.map((x, j) => (j === i ? { ...d, end: fromTime(e.target.value) } : x)) })} />
+              </>) : <span className="text-sm text-muted-foreground">Day off</span>}
+            </li>); })}
+        </ul>
+        <div className="flex items-center gap-3"><Label htmlFor="ob-daily">{pro ? "Most focused work per day (hours)" : "Most study per day (hours)"}</Label>
+          <Input id="ob-daily" type="number" min={0.5} step={0.5} className="w-24" value={a.dailyHours} onChange={(e) => set({ dailyHours: Math.max(0.5, parseFloat(e.target.value) || 0.5) })} /></div>
+      </div>) },
+    { title: pro ? "When do you work best?" : "When do you study best?", sub: "These times are filled first. Pick none for no preference.", body: (
+      <div className="grid gap-3 sm:grid-cols-3">
+        {(Object.keys(STUDY_PERIODS) as StudyPeriod[]).map((p) => { const on = a.preferredTimes.includes(p); return (
+          <button key={p} type="button" aria-pressed={on} onClick={() => set({ preferredTimes: on ? a.preferredTimes.filter((x) => x !== p) : [...a.preferredTimes, p] })}
+            className={cn("rounded-xl border-2 bg-card p-4 text-left text-sm font-bold transition-all hover:border-brand-lavender focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "border-brand-lavender bg-brand-soft-purple/60" : "border-border")}>
+            <span className="flex items-center gap-1.5">{on && <Check className="h-4 w-4 text-brand-lavender" />}{STUDY_PERIODS[p].label}</span>
+          </button>); })}
+      </div>) },
+    { title: pro ? "What's your preferred working style?" : "Smaller tasks or longer sessions?", sub: pro ? "Short sprints split work into blocks of 30 minutes or less." : "Smaller tasks split work into sittings of 30 minutes or less.", body: (
+      <div role="radiogroup" aria-label="Task style" className="grid gap-3 sm:grid-cols-2">
+        <Choice selected={a.taskStyle === "small"} onClick={() => set({ taskStyle: "small" })} title={pro ? "Short sprints" : "Smaller, manageable tasks"} desc={pro ? "Quick blocks between meetings." : "Short sittings, easy to start."} />
+        <Choice selected={a.taskStyle === "long"} onClick={() => set({ taskStyle: "long" })} title={pro ? "Deep-work blocks" : "Longer study sessions"} desc={`Uses your full ${a.sessionMinutes}-minute sessions.`} />
+      </div>) },
+    { title: pro ? "What are your work goals?" : "What are your personal goals?", sub: `Your goals appear on your ${v.plan} progress widget.`, body: (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5"><Label htmlFor="ob-goal">Your main goal (optional)</Label>
+          <Textarea id="ob-goal" placeholder={pro ? "e.g. Ship the Q3 launch on time and stop working evenings" : "e.g. Get a 2:1 this term and stop leaving essays to the last minute"} value={a.academicGoal} maxLength={200} onChange={(e) => set({ academicGoal: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5"><Label htmlFor="ob-weekly">{pro ? "Focus hours per week" : "Study hours per week"}</Label>
+            <Input id="ob-weekly" type="number" min={1} value={a.weeklyHours} onChange={(e) => set({ weeklyHours: Math.max(1, parseFloat(e.target.value) || 1) })} /></div>
+          <div className="flex flex-col gap-1.5"><Label htmlFor="ob-tasks">{pro ? "Action items per day" : "Tasks to finish per day"}</Label>
+            <Input id="ob-tasks" type="number" min={1} value={a.dailyTasks} onChange={(e) => set({ dailyTasks: Math.max(1, parseInt(e.target.value) || 1) })} /></div>
+        </div>
+      </div>) },
     { title: "Pick your colour theme", sub: "You can change this any time in Customise Dashboard.", body: (
       <div role="radiogroup" aria-label="Colour theme" className="grid gap-3 sm:grid-cols-2">
         {(Object.keys(THEMES) as ColourTheme[]).map((t) => (
@@ -63,72 +152,20 @@ export default function Onboarding() {
           </Choice>
         ))}
       </div>) },
-    { title: "Do you find it hard to stay focused?", sub: "If so, we'll suggest shorter sessions, bite-sized tasks, regular breaks and a simpler dashboard.", body: (
-      <div role="radiogroup" aria-label="Concentration support" className="grid gap-3 sm:grid-cols-2">
-        <Choice selected={a.focusSupport} onClick={() => setA(withFocusSupport(a))} title="Yes, help me focus" desc="25-minute sessions, 5-minute breaks, small tasks, Focus dashboard." />
-        <Choice selected={!a.focusSupport} onClick={() => set({ focusSupport: false })} title="No, I'm fine" desc="I'll choose my own session lengths." />
-      </div>) },
-    { title: "How long do you like to study in one go?", sub: "Your scheduler won't plan sittings longer than this.", body: (
-      <div role="radiogroup" aria-label="Session length" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[25, 45, 60, 90].map((m) => <Choice key={m} selected={a.sessionMinutes === m} onClick={() => set({ sessionMinutes: m })} title={`${m} min`} desc={m === 25 ? "Pomodoro" : m === 90 ? "Deep work" : undefined} />)}
-      </div>) },
-    { title: "How often do you want breaks?", sub: "A break is added after every session.", body: (
-      <div role="radiogroup" aria-label="Break length" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[5, 10, 15, 20].map((m) => <Choice key={m} selected={a.breakMinutes === m} onClick={() => set({ breakMinutes: m })} title={`${m} min break`} desc={`every ${sessionLength(a)} min`} />)}
-      </div>) },
-    { title: "When are you free to study?", sub: "Sessions are only scheduled inside these windows.", body: (
-      <div className="flex flex-col gap-3">
-        <ul className="flex flex-col gap-2">
-          {ORDER.map((i) => { const d = a.days[i]; return (
-            <li key={i} className="flex flex-wrap items-center gap-3 rounded-lg border bg-card px-3 py-2">
-              <Switch checked={!!d} aria-label={`Study on ${DAY_NAMES[i]}`} onCheckedChange={(on) => set({ days: a.days.map((x, j) => (j === i ? (on ? { start: 9, end: 18 } : null) : x)) })} />
-              <span className="w-24 text-sm font-semibold">{DAY_NAMES[i]}</span>
-              {d ? (<>
-                <Input type="time" aria-label={`${DAY_NAMES[i]} start`} className="w-32" value={toTime(d.start)} onChange={(e) => set({ days: a.days.map((x, j) => (j === i ? { ...d, start: fromTime(e.target.value) } : x)) })} />
-                <span className="text-sm text-muted-foreground">to</span>
-                <Input type="time" aria-label={`${DAY_NAMES[i]} end`} className="w-32" value={toTime(d.end)} onChange={(e) => set({ days: a.days.map((x, j) => (j === i ? { ...d, end: fromTime(e.target.value) } : x)) })} />
-              </>) : <span className="text-sm text-muted-foreground">Day off</span>}
-            </li>); })}
-        </ul>
-        <div className="flex items-center gap-3"><Label htmlFor="ob-daily">Most study per day (hours)</Label>
-          <Input id="ob-daily" type="number" min={0.5} step={0.5} className="w-24" value={a.dailyHours} onChange={(e) => set({ dailyHours: Math.max(0.5, parseFloat(e.target.value) || 0.5) })} /></div>
-      </div>) },
-    { title: "When do you study best?", sub: "These times are filled first. Pick none for no preference.", body: (
-      <div className="grid gap-3 sm:grid-cols-3">
-        {(Object.keys(STUDY_PERIODS) as StudyPeriod[]).map((p) => { const on = a.preferredTimes.includes(p); return (
-          <button key={p} type="button" aria-pressed={on} onClick={() => set({ preferredTimes: on ? a.preferredTimes.filter((x) => x !== p) : [...a.preferredTimes, p] })}
-            className={cn("rounded-xl border-2 bg-card p-4 text-left text-sm font-bold transition-all hover:border-brand-lavender focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "border-brand-lavender bg-brand-soft-purple/60" : "border-border")}>
-            <span className="flex items-center gap-1.5">{on && <Check className="h-4 w-4 text-brand-lavender" />}{STUDY_PERIODS[p].label}</span>
-          </button>); })}
-      </div>) },
-    { title: "Smaller tasks or longer sessions?", sub: "Smaller tasks split work into sittings of 30 minutes or less.", body: (
-      <div role="radiogroup" aria-label="Task style" className="grid gap-3 sm:grid-cols-2">
-        <Choice selected={a.taskStyle === "small"} onClick={() => set({ taskStyle: "small" })} title="Smaller, manageable tasks" desc="Short sittings, easy to start." />
-        <Choice selected={a.taskStyle === "long"} onClick={() => set({ taskStyle: "long" })} title="Longer study sessions" desc={`Uses your full ${a.sessionMinutes}-minute sessions.`} />
-      </div>) },
-    { title: "What are your academic goals?", sub: "Your goals appear on your Study Plan progress widget.", body: (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5"><Label htmlFor="ob-goal">Your main goal (optional)</Label>
-          <Textarea id="ob-goal" placeholder="e.g. Get a 2:1 this term and stop leaving essays to the last minute" value={a.academicGoal} maxLength={200} onChange={(e) => set({ academicGoal: e.target.value })} /></div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5"><Label htmlFor="ob-weekly">Study hours per week</Label>
-            <Input id="ob-weekly" type="number" min={1} value={a.weeklyHours} onChange={(e) => set({ weeklyHours: Math.max(1, parseFloat(e.target.value) || 1) })} /></div>
-          <div className="flex flex-col gap-1.5"><Label htmlFor="ob-tasks">Tasks to finish per day</Label>
-            <Input id="ob-tasks" type="number" min={1} value={a.dailyTasks} onChange={(e) => set({ dailyTasks: Math.max(1, parseInt(e.target.value) || 1) })} /></div>
-        </div>
-      </div>) },
-    { title: "Choose your dashboard layout", sub: "Decides which widgets your Study Plan shows.", body: (
+    { title: "Choose your dashboard layout", sub: `Decides which widgets your ${v.plan} shows.`, body: (
       <div role="radiogroup" aria-label="Dashboard layout" className="grid gap-3 sm:grid-cols-3">
         {(Object.keys(PRESETS) as DashboardPreset[]).map((p) => <Choice key={p} selected={a.layout === p} onClick={() => set({ layout: p })} title={PRESETS[p].label} desc={`${PRESETS[p].visible.length} widgets · ${PRESETS[p].mode}`} />)}
       </div>) },
-    { title: "Your study profile", sub: "Here's how Momentum will work for you.", body: (
+    { title: pro ? "Your work profile" : "Your study profile", sub: "Here's how Momentum will work for you.", body: (
       <div className="grid gap-3 sm:grid-cols-2">
         {[
+          ["You are", pro ? `Professional${a.role ? ` · ${a.role}` : ""}` : `Student${a.subject ? ` · ${a.subject}` : ""}${a.level ? ` (${a.level})` : ""}`],
+          ["Working on", (a.struggles ?? []).length ? (a.struggles ?? []).map((k) => STRUGGLES[k].label).join(", ") : "Nothing in particular"],
           ["Theme", THEMES[a.theme].label],
-          ["Study sessions", `${profile.availability.maxSessionMinutes} min, then a ${profile.availability.bufferMinutes}-min break${a.taskStyle === "small" ? " (small tasks)" : ""}`],
-          ["Study days", `${a.days.filter(Boolean).length} days a week, up to ${a.dailyHours}h a day`],
+          [pro ? "Focus sessions" : "Study sessions", `${profile.availability.maxSessionMinutes} min, then a ${profile.availability.bufferMinutes}-min break${a.taskStyle === "small" ? " (small tasks)" : ""}`],
+          [pro ? "Work days" : "Study days", `${a.days.filter(Boolean).length} days a week, up to ${a.dailyHours}h a day`],
           ["Best times", a.preferredTimes.length ? a.preferredTimes.map((p) => STUDY_PERIODS[p].label).join(", ") : "No preference"],
-          ["Goals", `${a.weeklyHours}h a week · ${a.dailyTasks} tasks a day`],
+          ["Goals", `${a.weeklyHours}h a week · ${a.dailyTasks} ${pro ? "action items" : "tasks"} a day`],
           ["Dashboard", `${PRESETS[a.layout].label}: ${visibleWidgets(profile.dashboard).map((w) => WIDGETS[w].label).join(", ")}`],
         ].map(([k, v]) => (
           <div key={k} className="rounded-lg border bg-card p-3"><p className="text-xs font-semibold text-muted-foreground">{k}</p><p className="text-sm font-semibold">{v}</p></div>
@@ -143,7 +180,7 @@ export default function Onboarding() {
     // Saves through the shared commit so the future Study Plan is rebuilt automatically.
     commit({ onboarding: { status: "completed", at: new Date().toISOString(), answers: a }, ...profile }, () => {
       toast.success("Momentum is now yours");
-      navigate("/plan");
+      navigate("/dashboard");
     });
   };
   const finish = () => (hasExisting ? setConfirm(true) : apply());
@@ -166,7 +203,7 @@ export default function Onboarding() {
         <Progress value={((step + 1) / steps.length) * 100} aria-label={`Step ${step + 1} of ${steps.length}`} className="h-2 bg-brand-soft-purple [&>div]:bg-brand-lavender" />
         <p className="text-xs font-semibold text-muted-foreground" aria-live="polite">Step {step + 1} of {steps.length}</p>
       </div>
-      <Card className="border-border/80 bg-brand-soft-white shadow-sm"><CardContent className="p-5">{steps[step].body}</CardContent></Card>
+      <Card key={step} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 border-border/80 bg-brand-soft-white shadow-sm"><CardContent className="p-5">{steps[step].body}</CardContent></Card>
       <div className="flex justify-between">
         <Button variant="outline" disabled={step === 0} onClick={() => setStep(step - 1)}><ArrowLeft className="mr-1.5 h-4 w-4" />Back</Button>
         {step < last
@@ -179,7 +216,7 @@ export default function Onboarding() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Replace your current settings?</AlertDialogTitle>
-            <AlertDialogDescription>This updates your theme, dashboard layout, goals, session length, breaks, study times and daily availability. Your assignments, tasks and planned sessions stay as they are.</AlertDialogDescription>
+            <AlertDialogDescription>This updates your role, theme, dashboard layout, goals, session length, breaks, study times and daily availability. Your {v.items}, tasks and planned sessions stay as they are.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep current settings</AlertDialogCancel>

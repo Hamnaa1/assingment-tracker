@@ -11,6 +11,8 @@ import { AssignmentForm, validateDraft } from "@/components/momentum/AssignmentF
 import { useMomentum } from "@/lib/momentum/store";
 import type { Assignment } from "@/lib/momentum/types";
 import { toast } from "sonner";
+import { usePersona } from "@/components/momentum/usePersona";
+import { plannerTip } from "@/lib/momentum/persona";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -34,6 +36,7 @@ Referencing: 10%`;
 
 export default function Planner() {
   const { dispatch } = useMomentum();
+  const { v, profile } = usePersona();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -112,9 +115,9 @@ export default function Planner() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">AI Assignment Planner</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">AI {v.Item} Planner</h1>
         <p className="text-sm text-muted-foreground">
-          Paste or upload your brief — Momentum extracts the details and builds a personalised plan.
+          {plannerTip(profile)}
         </p>
         <Badge variant="outline" className="mt-2 border-brand-lilac/50 bg-brand-soft-purple text-brand-charcoal">
           {source === "fallback" ? "Offline mode · AI unavailable, using built-in extraction" : "AI-powered · always check the extracted details"}

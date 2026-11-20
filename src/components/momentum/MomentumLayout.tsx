@@ -10,20 +10,22 @@ import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings,
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { usePersona } from "./usePersona";
 
-const NAV = [
+const nav = (v: ReturnType<typeof usePersona>["v"]) => [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/assignments", label: "My Assignments", icon: FolderOpen },
-  { to: "/planner", label: "AI Planner", icon: Sparkles },
-  { to: "/plan", label: "Study Plan", icon: ListChecks },
+  { to: "/assignments", label: v.myItems, icon: FolderOpen },
+  { to: "/planner", label: v.planner, icon: Sparkles },
+  { to: "/plan", label: v.plan, icon: ListChecks },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/focus", label: "Focus Mode", icon: Timer },
   { to: "/friends", label: "Friends", icon: Users },
-  { to: "/review", label: "Assignment Review", icon: ClipboardCheck },
+  { to: "/review", label: v.review, icon: ClipboardCheck },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 function Logo() {
+  const { v } = usePersona();
   return (
     <div className="flex items-center gap-2.5 px-2">
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-lavender">
@@ -31,7 +33,7 @@ function Logo() {
       </div>
       <div>
         <p className="text-base font-extrabold tracking-tight text-white">MOMENTUM</p>
-        <p className="text-[11px] leading-tight text-sidebar-foreground">Plan smarter. Submit stronger.</p>
+        <p className="text-[11px] leading-tight text-sidebar-foreground">{v.tagline}</p>
       </div>
     </div>
   );
@@ -39,9 +41,10 @@ function Logo() {
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
+  const { v } = usePersona();
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">
-      {NAV.map(({ to, label, icon: Icon }) => (
+      {nav(v).map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
@@ -67,7 +70,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
             navigate("/planner");
           }}
         >
-          <Plus className="mr-1.5 h-4 w-4" /> New assignment
+          <Plus className="mr-1.5 h-4 w-4" /> New {v.item}
         </Button>
         <button className="mt-3 w-full text-xs text-sidebar-foreground hover:text-white" onClick={() => supabase.auth.signOut()}>
           Sign out

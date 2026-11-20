@@ -8,10 +8,14 @@ import { useMomentum } from "@/lib/momentum/store";
 import { completionPct, computePriority, daysUntil } from "@/lib/momentum/priority";
 import { AssignmentCard, DeadlinePill, EmptyState, SectionTitle } from "@/components/momentum/shared";
 import { cn } from "@/lib/utils";
+import { usePersona } from "@/components/momentum/usePersona";
+import { progressSummary } from "@/lib/momentum/persona";
 
 export default function Dashboard() {
   const { state, dispatch } = useMomentum();
   const { assignments, tasks, sessions, studentName } = state;
+  const { v, persona, profile } = usePersona();
+  const pro = persona === "professional";
 
   const active = assignments.filter((a) => completionPct(tasks.filter((t) => t.assignmentId === a.id)) < 100);
   const completedTasks = tasks.filter((t) => t.completed).length;
@@ -31,13 +35,13 @@ export default function Dashboard() {
 
   const top = ranked[0];
   const insight = top
-    ? `You should prioritise "${top.a.title}" today. It is due in ${Math.max(daysUntil(top.a.deadline), 0)} day${daysUntil(top.a.deadline) === 1 ? "" : "s"}, contributes ${top.a.weighting ?? 20}% to your module grade, and you still have ${100 - completionPct(tasks.filter((t) => t.assignmentId === top.a.id))}% of the work remaining.`
+    ? `${pro ? "Your top priority today is" : "You should prioritise"} "${top.a.title}"${pro ? "" : " today"}. It is due in ${Math.max(daysUntil(top.a.deadline), 0)} day${daysUntil(top.a.deadline) === 1 ? "" : "s"}, ${pro ? `carries ${top.a.weighting ?? 20}% weight in your priorities` : `contributes ${top.a.weighting ?? 20}% to your module grade`}, and you still have ${100 - completionPct(tasks.filter((t) => t.assignmentId === top.a.id))}% of the ${pro ? "deliverable" : "work"} remaining.`
     : null;
 
   const stats = [
-    { label: "Active assignments", value: active.length, icon: FolderOpen },
+    { label: `Active ${v.items}`, value: active.length, icon: FolderOpen },
     { label: "Deadlines this week", value: nextWeek, icon: Clock3 },
-    { label: "Tasks completed", value: completedTasks, icon: CheckCircle2 },
+    { label: pro ? "Action items done" : "Tasks completed", value: completedTasks, icon: CheckCircle2 },
     { label: "Focus hours", value: (studyMinutes / 60).toFixed(1), icon: Flame },
     { label: "Completion rate", value: `${overall}%`, icon: TrendingUp },
   ];
@@ -51,11 +55,11 @@ export default function Dashboard() {
             {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
           </p>
           <h1 className="text-3xl font-extrabold tracking-tight">Welcome back, {studentName}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">We don't just help you plan your work. We help you actually do it.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{progressSummary(profile, completedTasks, tasks.length, studyMinutes / 60)}</p>
         </div>
         <Button asChild className="bg-brand-lavender text-white hover:bg-brand-lavender/90">
           <Link to="/planner">
-            <Plus className="mr-1.5 h-4 w-4" /> Add assignment
+            <Plus className="mr-1.5 h-4 w-4" /> Add {v.item}
           </Link>
         </Button>
       </div>
@@ -94,7 +98,7 @@ export default function Dashboard() {
         {/* Priority assignments */}
         <div className="lg:col-span-2">
           <SectionTitle
-            title="Priority assignments"
+            title={pro ? "Priority projects" : "Priority assignments"}
             subtitle="Ranked by the Momentum priority engine"
             action={
               <Button asChild variant="ghost" size="sm" className="text-brand-lavender">
@@ -106,11 +110,11 @@ export default function Dashboard() {
           />
           {ranked.length === 0 ? (
             <EmptyState
-              title="No assignments yet"
-              hint="Add your first assignment brief and Momentum will build a personalised plan."
+              title={`No ${v.items} yet`}
+              hint={`Add your first ${v.item} brief and Momentum will build a personalised plan.`}
               action={
                 <Button asChild className="mt-2 bg-brand-lavender text-white hover:bg-brand-lavender/90">
-                  <Link to="/planner">Add assignment</Link>
+                  <Link to="/planner">Add {v.item}</Link>
                 </Button>
               }
             />
@@ -126,7 +130,7 @@ export default function Dashboard() {
         {/* Right column */}
         <div className="flex flex-col gap-8">
           <div>
-            <SectionTitle title="Today's tasks" subtitle="Due today or overdue" />
+            <SectionTitle title={pro ? "Today's action items" : "Today's tasks"} subtitle="Due today or overdue" />
             <Card className="border-border/80 shadow-sm">
               <CardContent className="flex flex-col gap-1 p-3">
                 {todaysTasks.length === 0 && <p className="p-3 text-sm text-muted-foreground">Nothing due today — great position to get ahead.</p>}

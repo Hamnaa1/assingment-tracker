@@ -4,11 +4,12 @@
  * dashboard and the scheduling engine pick them up directly.
  */
 import { applyPreset, dashboardOf, withHabits, type ColourTheme, type DashboardPreset, type DashboardPrefs } from "./dashboard";
+import type { ProfileInfo } from "./persona";
 import type { DayWindow, SchedulePrefs, StudyPeriod } from "./schedule";
 
 export type TaskStyle = "small" | "long";
 
-export interface OnboardingAnswers {
+export interface OnboardingAnswers extends ProfileInfo {
   theme: ColourTheme;
   focusSupport: boolean; // student finds it hard to concentrate
   sessionMinutes: number;
@@ -37,6 +38,11 @@ export const FOCUS_SUPPORT = { sessionMinutes: 25, breakMinutes: 5, taskStyle: "
 export function defaultAnswers(dash?: Partial<DashboardPrefs>, prefs?: SchedulePrefs): OnboardingAnswers {
   const d = dashboardOf(dash);
   return {
+    persona: "student",
+    subject: "",
+    level: "",
+    role: "",
+    struggles: [],
     theme: d.theme ?? "lavender",
     focusSupport: false,
     sessionMinutes: prefs?.maxSessionMinutes ?? 50,

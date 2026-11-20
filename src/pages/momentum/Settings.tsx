@@ -50,9 +50,9 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {state.onboarding?.status === "completed" ? "Retake the questionnaire to update your theme, dashboard and study habits. You'll confirm before anything changes." : "Answer a few questions and we'll set up your Study Plan and schedule for you."}
+            {state.onboarding?.status === "completed" ? "Change whether you're a student or professional, your goals, focus habits, theme and dashboard. You'll confirm before anything changes." : "Answer a few questions and we'll set up your Study Plan and schedule for you."}
           </p>
-          <Button asChild variant="outline" className="w-fit"><Link to="/welcome"><Sparkles className="mr-1.5 h-4 w-4" />{state.onboarding?.status === "completed" ? "Retake onboarding" : "Start onboarding"}</Link></Button>
+          <Button asChild variant="outline" className="w-fit"><Link to="/welcome"><Sparkles className="mr-1.5 h-4 w-4" />{state.onboarding?.status === "completed" ? "Edit my preferences" : "Start onboarding"}</Link></Button>
         </CardContent>
       </Card>
 

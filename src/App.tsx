@@ -13,6 +13,8 @@ import Planner from "./pages/momentum/Planner";
 import Focus from "./pages/momentum/Focus";
 import Review from "./pages/momentum/Review";
 import Settings from "./pages/momentum/Settings";
+import Auth from "./pages/momentum/Auth";
+import OAuthConsent from "./pages/momentum/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route element={<MomentumLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/assignments" element={<Assignments />} />

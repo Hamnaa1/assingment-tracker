@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import * as z from "zod/v3";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -83,7 +83,7 @@ export function ScheduleInterviewDialog({
   const [panelPickerOpen, setPanelPickerOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema as never),
     defaultValues: {
       title: '',
       interview_type: 'virtual',

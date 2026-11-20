@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useMomentum } from "@/lib/momentum/store";
+import { supabase } from "@/integrations/supabase/client";
+import { AgentTools } from "./AgentTools";
 import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings, Menu, Zap, Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -60,6 +63,9 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
         >
           <Plus className="mr-1.5 h-4 w-4" /> New assignment
         </Button>
+        <button className="mt-3 w-full text-xs text-sidebar-foreground hover:text-white" onClick={() => supabase.auth.signOut()}>
+          Sign out
+        </button>
       </div>
     </nav>
   );
@@ -67,6 +73,11 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function MomentumLayout() {
   const [open, setOpen] = useState(false);
+  const { session, authReady, dataReady } = useMomentum();
+  const location = useLocation();
+  if (!authReady) return null;
+  if (!session) return <Navigate to={"/login?next=" + encodeURIComponent(location.pathname + location.search)} replace />;
+  if (!dataReady) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading your workspace…</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -100,6 +111,7 @@ export default function MomentumLayout() {
 
         <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-6xl">
+            <AgentTools />
             <Outlet />
           </div>
         </main>

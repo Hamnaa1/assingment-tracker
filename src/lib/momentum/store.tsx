@@ -3,6 +3,9 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Assignment, CalendarEvent, CalendarFeed, FocusSession, ReviewResult, StudySession, Task } from "./types";
 import { seedDemoData } from "./demoData";
+import type { ScheduleLogEntry } from "./engine";
+import type { PriorityWeights } from "./priority";
+import type { SchedulePrefs } from "./schedule";
 
 interface State {
   assignments: Assignment[];
@@ -13,6 +16,9 @@ interface State {
   studySessions?: StudySession[];
   calendarFeeds?: CalendarFeed[];
   calendarEvents?: CalendarEvent[];
+  availability?: SchedulePrefs;
+  priorityWeights?: PriorityWeights;
+  scheduleLog?: ScheduleLogEntry[];
 }
 
 type Action =
@@ -32,6 +38,9 @@ type Action =
   | { type: "deleteStudySession"; id: string }
   | { type: "upsertFeed"; feed: CalendarFeed; events?: CalendarEvent[] }
   | { type: "removeFeed"; id: string }
+  | { type: "setAvailability"; availability: SchedulePrefs }
+  | { type: "setWeights"; weights: PriorityWeights }
+  | { type: "applyReschedule"; sessions: StudySession[]; removeIds: string[]; taskUpdates: Task[]; log: ScheduleLogEntry }
   | { type: "reset" }
   | { type: "hydrate"; state: State };
 
@@ -77,6 +86,20 @@ function reducer(state: State, action: Action): State {
         calendarEvents: action.events
           ? [...(state.calendarEvents ?? []).filter((e) => e.feedId !== action.feed.id), ...action.events]
           : state.calendarEvents,
+      };
+    }
+    case "setAvailability":
+      return { ...state, availability: action.availability };
+    case "setWeights":
+      return { ...state, priorityWeights: action.weights };
+    case "applyReschedule": {
+      const drop = new Set(action.removeIds);
+      const upd = new Map(action.taskUpdates.map((t) => [t.id, t]));
+      return {
+        ...state,
+        tasks: state.tasks.map((t) => upd.get(t.id) ?? t),
+        studySessions: [...(state.studySessions ?? []).filter((s) => !drop.has(s.id)), ...action.sessions],
+        scheduleLog: [action.log, ...(state.scheduleLog ?? [])].slice(0, 10),
       };
     }
     case "removeFeed":

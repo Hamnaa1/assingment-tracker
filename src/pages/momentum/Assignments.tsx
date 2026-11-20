@@ -1,3 +1,4 @@
+import { priorityFor } from "@/lib/momentum/engine";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { AssignmentCard, EmptyState } from "@/components/momentum/shared";
 export default function Assignments() {
   const { state } = useMomentum();
   const ranked = [...state.assignments]
-    .map((a) => ({ a, p: computePriority(a, state.tasks.filter((t) => t.assignmentId === a.id)) }))
+    .map((a) => ({ a, p: priorityFor(state, a) }))
     .sort((x, y) => y.p.score - x.p.score);
 
   return (

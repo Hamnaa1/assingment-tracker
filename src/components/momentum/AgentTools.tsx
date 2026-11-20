@@ -1,3 +1,4 @@
+import { priorityFor } from "@/lib/momentum/engine";
 import { useWebMCP } from "use-webmcp-tool";
 import { useMomentum } from "@/lib/momentum/store";
 import { computePriority, completionPct } from "@/lib/momentum/priority";
@@ -17,7 +18,7 @@ export function AgentTools() {
         return state.assignments
           .map((a) => {
             const tasks = state.tasks.filter((t) => t.assignmentId === a.id);
-            const p = computePriority(a, tasks);
+            const p = priorityFor(state, a);
             return `${a.id}: ${a.title} (${a.module}) — due ${a.deadline.slice(0, 10)}, priority ${p.score} ${p.level}, ${completionPct(tasks)}% done`;
           })
           .join("\n");

@@ -3,7 +3,7 @@ import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-route
 import { useMomentum } from "@/lib/momentum/store";
 import { supabase } from "@/integrations/supabase/client";
 import { AgentTools } from "./AgentTools";
-import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings, Menu, CalendarDays, Zap, Plus } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Sparkles, Timer, ClipboardCheck, Settings, Menu, CalendarDays, ListChecks, Zap, Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/assignments", label: "My Assignments", icon: FolderOpen },
   { to: "/planner", label: "AI Planner", icon: Sparkles },
+  { to: "/plan", label: "Study Plan", icon: ListChecks },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/focus", label: "Focus Mode", icon: Timer },
   { to: "/review", label: "Assignment Review", icon: ClipboardCheck },

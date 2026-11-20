@@ -5,6 +5,152 @@
 // src/lib/mcp/index.ts
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@3.6.0";
 
+// src/lib/momentum/priority.ts
+var clamp = (n, min = 0, max = 100) => Math.min(max, Math.max(min, n));
+function daysUntil(isoDate, now = /* @__PURE__ */ new Date()) {
+  const due = new Date(isoDate);
+  const diff = due.getTime() - now.getTime();
+  return Math.ceil(diff / (1e3 * 60 * 60 * 24));
+}
+function completionPct(tasks) {
+  if (tasks.length === 0) return 0;
+  const total = tasks.reduce((s, t) => s + Math.max(t.estimatedMinutes, 15), 0);
+  const done = tasks.filter((t) => t.completed).reduce((s, t) => s + Math.max(t.estimatedMinutes, 15), 0);
+  return Math.round(done / total * 100);
+}
+function remainingMinutes(tasks) {
+  return tasks.filter((t) => !t.completed).reduce((sum, t) => sum + t.estimatedMinutes, 0);
+}
+function levelForScore(score) {
+  if (score >= 80) return "critical";
+  if (score >= 60) return "high";
+  if (score >= 40) return "medium";
+  return "low";
+}
+var DEFAULT_WEIGHTS = { urgency: 35, workload: 20, importance: 20, difficulty: 10, risk: 15 };
+var FACTOR_LABELS = {
+  urgency: "Deadline urgency",
+  workload: "Remaining workload",
+  importance: "Grade weighting",
+  difficulty: "Difficulty",
+  risk: "Fall-behind risk"
+};
+function normaliseWeights(w) {
+  const total = Object.values(w).reduce((s, v) => s + Math.max(0, v), 0) || 1;
+  return {
+    urgency: Math.max(0, w.urgency) / total * 100,
+    workload: Math.max(0, w.workload) / total * 100,
+    importance: Math.max(0, w.importance) / total * 100,
+    difficulty: Math.max(0, w.difficulty) / total * 100,
+    risk: Math.max(0, w.risk) / total * 100
+  };
+}
+function computePriority(assignment, tasks, now = /* @__PURE__ */ new Date(), opts = {}) {
+  const w = normaliseWeights(opts.weights ?? DEFAULT_WEIGHTS);
+  const days = daysUntil(assignment.deadline, now);
+  const done = completionPct(tasks);
+  const remaining = remainingMinutes(tasks);
+  const urgency = days < 0 ? 100 : clamp(95 - days * 4.5, 5, 100);
+  const workload = tasks.length ? 100 - done : 100;
+  const importance = clamp((assignment.weighting ?? 20) * 2.5, 10, 100);
+  const difficulty = clamp(assignment.difficulty * 20, 20, 100);
+  const availableMin = opts.availableMinutes ?? Math.max(days, 0.5) * 240;
+  const neededHours = remaining / 60;
+  const risk = remaining === 0 ? 0 : availableMin <= 0 ? 100 : clamp(remaining / availableMin * 100, 0, 100);
+  const parts = {
+    urgency: urgency * w.urgency / 100,
+    workload: workload * w.workload / 100,
+    importance: importance * w.importance / 100,
+    difficulty: difficulty * w.difficulty / 100,
+    risk: risk * w.risk / 100
+  };
+  const score = Math.round(clamp(Object.values(parts).reduce((s, v) => s + v, 0)));
+  const level = levelForScore(score);
+  const dueText = days < 0 ? `is overdue by ${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"}` : days === 0 ? "is due today" : `is due in ${days} day${days === 1 ? "" : "s"}`;
+  const top = Object.keys(parts).sort((a, b) => parts[b] - parts[a]).slice(0, 2).map((k) => FACTOR_LABELS[k].toLowerCase());
+  const availH = Math.round(availableMin / 60 * 10) / 10;
+  const riskText = remaining === 0 ? "" : ` You need about ${Math.round(neededHours * 10) / 10}h and have roughly ${availH}h of free study time before it's due${risk >= 80 ? " \u2014 that's very tight" : ""}.`;
+  const explanation = `Priority ${score} \u2014 ${level.charAt(0).toUpperCase() + level.slice(1)}. "${assignment.title}" ${dueText}, is worth ${assignment.weighting ?? 20}% of your module grade, is rated ${assignment.difficulty}/5 for difficulty, and is ${done}% complete. Biggest drivers: ${top.join(" and ")}.${riskText}`;
+  return {
+    score,
+    level,
+    urgency: Math.round(urgency),
+    workload: Math.round(workload),
+    importance: Math.round(importance),
+    difficulty: Math.round(difficulty),
+    risk: Math.round(risk),
+    weights: w,
+    explanation
+  };
+}
+
+// src/lib/momentum/schedule.ts
+var DEFAULT_PREFS = {
+  days: Array.from({ length: 7 }, () => ({ start: 9, end: 21 })),
+  bufferMinutes: 15,
+  maxSessionMinutes: 120,
+  maxDailyMinutes: 360
+};
+var MIN = 6e4;
+var dayKey = (t) => new Date(t).toDateString();
+function windowFor(day, prefs) {
+  const w = prefs.days[day.getDay()];
+  if (!w || w.end <= w.start) return null;
+  const s = new Date(day);
+  s.setHours(Math.floor(w.start), Math.round(w.start % 1 * 60), 0, 0);
+  const e = new Date(day);
+  e.setHours(Math.floor(w.end), Math.round(w.end % 1 * 60), 0, 0);
+  return { start: s.getTime(), end: e.getTime() };
+}
+function busyIntervals(events, sessions, bufferMinutes = 0) {
+  const pad = bufferMinutes * MIN;
+  return [
+    ...events.filter((e) => !e.allDay).map((e) => ({ start: Date.parse(e.start) - pad, end: Date.parse(e.end) + pad })),
+    ...sessions.map((s) => ({ start: Date.parse(s.start) - pad, end: Date.parse(s.end) + pad }))
+  ].sort((a, b) => a.start - b.start);
+}
+function freeWindows(from, to, busy, prefs = DEFAULT_PREFS) {
+  const out = [];
+  const day = new Date(from);
+  day.setHours(0, 0, 0, 0);
+  while (day.getTime() < to.getTime()) {
+    const w = windowFor(day, prefs);
+    if (w) {
+      let cursor = Math.max(w.start, from.getTime());
+      const end = Math.min(w.end, to.getTime());
+      for (const b of busy) {
+        if (b.end <= cursor || b.start >= end) continue;
+        if (b.start > cursor) out.push({ start: cursor, end: b.start });
+        cursor = Math.max(cursor, b.end);
+      }
+      if (cursor < end) out.push({ start: cursor, end });
+    }
+    day.setDate(day.getDate() + 1);
+  }
+  return out.filter((w) => w.end - w.start >= 15 * MIN);
+}
+function availableMinutes(from, to, busy, prefs = DEFAULT_PREFS) {
+  const perDay = /* @__PURE__ */ new Map();
+  for (const w of freeWindows(from, to, busy, prefs)) perDay.set(dayKey(w.start), (perDay.get(dayKey(w.start)) ?? 0) + (w.end - w.start) / MIN);
+  let total = 0;
+  perDay.forEach((m) => total += Math.min(m, prefs.maxDailyMinutes));
+  return Math.round(total);
+}
+
+// src/lib/momentum/engine.ts
+var prefsOf = (ws) => ({ ...DEFAULT_PREFS, ...ws.availability ?? {} });
+var weightsOf = (ws) => ({ ...DEFAULT_WEIGHTS, ...ws.priorityWeights ?? {} });
+var deadlineEnd = (a) => /* @__PURE__ */ new Date(`${a.deadline}T${a.deadlineTime ?? "23:59"}:00`);
+function freeMinutesBefore(ws, a, now = /* @__PURE__ */ new Date()) {
+  const others = (ws.studySessions ?? []).filter((s) => s.assignmentId !== a.id);
+  const busy = busyIntervals(ws.calendarEvents ?? [], others, prefsOf(ws).bufferMinutes);
+  return availableMinutes(now, deadlineEnd(a), busy, prefsOf(ws));
+}
+function priorityFor(ws, a, now = /* @__PURE__ */ new Date()) {
+  const tasks = ws.tasks.filter((t) => t.assignmentId === a.id);
+  return computePriority(a, tasks, now, { weights: weightsOf(ws), availableMinutes: freeMinutesBefore(ws, a, now) });
+}
+
 // src/lib/mcp/tools/list-assignments.ts
 import { defineTool } from "npm:@lovable.dev/mcp-js@3.6.0";
 
@@ -83,51 +229,6 @@ var taskJson = (t) => ({
   completed: t.completed
 });
 
-// src/lib/momentum/priority.ts
-var clamp = (n, min = 0, max = 100) => Math.min(max, Math.max(min, n));
-function daysUntil(isoDate, now = /* @__PURE__ */ new Date()) {
-  const due = new Date(isoDate);
-  const diff = due.getTime() - now.getTime();
-  return Math.ceil(diff / (1e3 * 60 * 60 * 24));
-}
-function completionPct(tasks) {
-  if (tasks.length === 0) return 0;
-  return Math.round(tasks.filter((t) => t.completed).length / tasks.length * 100);
-}
-function remainingMinutes(tasks) {
-  return tasks.filter((t) => !t.completed).reduce((sum, t) => sum + t.estimatedMinutes, 0);
-}
-function levelForScore(score) {
-  if (score >= 80) return "critical";
-  if (score >= 60) return "high";
-  if (score >= 40) return "medium";
-  return "low";
-}
-function computePriority(assignment, tasks, now = /* @__PURE__ */ new Date()) {
-  const days = daysUntil(assignment.deadline, now);
-  const done = completionPct(tasks);
-  const remaining = remainingMinutes(tasks);
-  const urgency = days < 0 ? 100 : clamp(95 - days * 4.5, 5, 100);
-  const workload = 100 - done;
-  const importance = clamp((assignment.weighting ?? 20) * 2.5, 10, 100);
-  const availableHours = Math.max(days, 0.5) * 4;
-  const neededHours = remaining / 60;
-  const risk = clamp(neededHours / availableHours * 100, 0, 100);
-  const score = Math.round(clamp(urgency * 0.4 + workload * 0.25 + importance * 0.2 + risk * 0.15));
-  const level = levelForScore(score);
-  const dueText = days < 0 ? `is overdue by ${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"}` : days === 0 ? "is due today" : `is due in ${days} day${days === 1 ? "" : "s"}`;
-  const explanation = `Priority ${score} \u2014 ${level.charAt(0).toUpperCase() + level.slice(1)}. "${assignment.title}" ${dueText}, contributes ${assignment.weighting ?? 20}% of your module grade, and you have completed ${done}% of the required work (${Math.round(neededHours * 10) / 10}h remaining).`;
-  return {
-    score,
-    level,
-    urgency: Math.round(urgency),
-    workload: Math.round(workload),
-    importance: Math.round(importance),
-    risk: Math.round(risk),
-    explanation
-  };
-}
-
 // src/lib/mcp/tools/list-assignments.ts
 var list_assignments_default = defineTool({
   name: "list_assignments",
@@ -139,7 +240,7 @@ var list_assignments_default = defineTool({
     const { ws } = await loadWorkspace(ctx);
     const rows = ws.assignments.map((a) => {
       const tasks = ws.tasks.filter((t) => t.assignmentId === a.id);
-      const p = computePriority(a, tasks);
+      const p = priorityFor(ws, a);
       return { id: a.id, title: a.title, module: a.module, deadline: a.deadline, priorityScore: p.score, priorityLevel: p.level, percentComplete: completionPct(tasks), explanation: p.explanation };
     }).sort((x, y) => y.priorityScore - x.priorityScore);
     const text = rows.length ? rows.map((r) => `${r.id}: ${r.title} (${r.module}) \u2014 due ${r.deadline.slice(0, 10)}, priority ${r.priorityScore} ${r.priorityLevel}, ${r.percentComplete}% done`).join("\n") : "No assignments.";

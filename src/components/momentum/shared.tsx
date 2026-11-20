@@ -1,3 +1,5 @@
+import { priorityFor } from "@/lib/momentum/engine";
+import { useMomentum } from "@/lib/momentum/store";
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +43,8 @@ export function DeadlinePill({ deadline }: { deadline: string }) {
 }
 
 export function AssignmentCard({ assignment, tasks }: { assignment: Assignment; tasks: Task[] }) {
-  const p = computePriority(assignment, tasks);
+  const { state } = useMomentum();
+  const p = priorityFor(state, assignment);
   const done = completionPct(tasks);
   const remaining = tasks.filter((t) => !t.completed).length;
 

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useMomentum } from "@/lib/momentum/store";
 import { busyIntervals, findSlot } from "@/lib/momentum/schedule";
+import { prefsOf } from "@/lib/momentum/engine";
 import { buildIcs, downloadIcs } from "@/lib/momentum/ics";
 import type { Assignment, StudySession, Task } from "@/lib/momentum/types";
 import { toast } from "sonner";
@@ -19,13 +20,14 @@ const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-$
 export function ScheduleDialog({ assignment, task, session, onDone }: { assignment: Assignment; task?: Task; session?: StudySession; onDone: () => void }) {
   const { state, dispatch } = useMomentum();
   const others = useMemo(() => (state.studySessions ?? []).filter((s) => s.id !== session?.id), [state.studySessions, session?.id]);
-  const busy = useMemo(() => busyIntervals(state.calendarEvents ?? [], others, 15), [state.calendarEvents, others]);
+  const busy = useMemo(() => busyIntervals(state.calendarEvents ?? [], others, prefsOf(state).bufferMinutes), [state.calendarEvents, others]);
 
   const initialMinutes = session ? Math.round((Date.parse(session.end) - Date.parse(session.start)) / 60000) : Math.min(120, Math.max(30, task?.estimatedMinutes || 60));
   const suggest = (minutes: number) => {
     const due = new Date((task?.dueDate ?? assignment.deadline) + "T23:59:00");
     const deadline = new Date(assignment.deadline + "T23:59:00");
-    return findSlot(minutes, new Date(), due, busy) ?? findSlot(minutes, new Date(), deadline, busy);
+    const prefs = prefsOf(state);
+    return findSlot(minutes, new Date(), due, busy, prefs) ?? findSlot(minutes, new Date(), deadline, busy, prefs);
   };
   const first = session ? { start: Date.parse(session.start) } : suggest(initialMinutes);
 

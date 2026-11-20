@@ -1,3 +1,4 @@
+import { prefsOf, priorityFor } from "@/lib/momentum/engine";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarClock, CalendarPlus, CalendarRange, Check, Flag, Pencil, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
@@ -128,7 +129,7 @@ export default function AssignmentDetail() {
     );
   }
 
-  const p = computePriority(assignment, tasks);
+  const p = priorityFor(state, assignment);
   const done = completionPct(tasks);
   const remainingMin = tasks.filter((t) => !t.completed).reduce((s, t) => s + t.estimatedMinutes, 0);
   const days = daysUntil(assignment.deadline);
@@ -138,7 +139,7 @@ export default function AssignmentDetail() {
   const nowIso = new Date().toISOString();
   const futureSessions = sessions.filter((s) => s.start > nowIso);
   const otherSessions = (state.studySessions ?? []).filter((s) => s.assignmentId !== assignment.id || s.start <= nowIso);
-  const availability = scheduleTasks(tasks, assignment.deadline, busyIntervals(state.calendarEvents ?? [], otherSessions, 15));
+  const availability = scheduleTasks(tasks, assignment.deadline, busyIntervals(state.calendarEvents ?? [], otherSessions, prefsOf(state).bufferMinutes), new Date(), prefsOf(state));
   const tight = availability.unscheduledMinutes > 0;
 
   const saveEdits = () => {
@@ -278,7 +279,7 @@ export default function AssignmentDetail() {
                 {tight
                   ? "Try shortening task estimates, moving commitments, or starting earlier each day."
                   : (state.calendarFeeds ?? []).length
-                    ? "Based on your connected calendar and study hours (9:00–21:00)."
+                    ? "Based on your connected calendar and your study availability."
                     : "Connect a calendar in Settings so this accounts for your lectures, shifts and plans."}
                 {futureSessions.length > 0 && ` · ${futureSessions.length} upcoming session${futureSessions.length > 1 ? "s" : ""} booked.`}
               </p>
@@ -286,7 +287,7 @@ export default function AssignmentDetail() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => setRegenOpen(true)}><RefreshCw className="mr-1.5 h-4 w-4" /> Regenerate plan</Button>
-            <Button size="sm" className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={() => setPreview(scheduleTasks(tasks, assignment.deadline, busyIntervals(state.calendarEvents ?? [], otherSessions, 15)))}>
+            <Button size="sm" className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={() => setPreview(scheduleTasks(tasks, assignment.deadline, busyIntervals(state.calendarEvents ?? [], otherSessions, prefsOf(state).bufferMinutes), new Date(), prefsOf(state)))}>
               <CalendarPlus className="mr-1.5 h-4 w-4" /> Schedule around my calendar
             </Button>
           </div>
@@ -303,16 +304,17 @@ export default function AssignmentDetail() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-brand-charcoal">Why this priority?</p>
               <p className="mt-0.5 text-sm text-brand-charcoal/80">{p.explanation}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
-                  ["Urgency", p.urgency, "40%"],
-                  ["Workload left", p.workload, "25%"],
-                  ["Importance", p.importance, "20%"],
-                  ["Fall-behind risk", p.risk, "15%"],
-                ].map(([label, v, w]) => (
+                  ["Urgency", p.urgency, p.weights?.urgency],
+                  ["Workload left", p.workload, p.weights?.workload],
+                  ["Grade weighting", p.importance, p.weights?.importance],
+                  ["Difficulty", p.difficulty ?? 0, p.weights?.difficulty],
+                  ["Fall-behind risk", p.risk, p.weights?.risk],
+                ].map(([label, v, wt]) => (
                   <div key={label as string} className="rounded-lg bg-white/70 p-2.5">
                     <p className="text-xs text-muted-foreground">
-                      {label} · {w}
+                      {label} · {Math.round((wt as number) ?? 0)}%
                     </p>
                     <p className="text-lg font-extrabold text-brand-charcoal">{v}</p>
                   </div>

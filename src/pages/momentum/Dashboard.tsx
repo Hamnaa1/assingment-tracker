@@ -1,3 +1,4 @@
+import { priorityFor } from "@/lib/momentum/engine";
 import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Clock3, Flame, FolderOpen, Plus, Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export default function Dashboard() {
     .slice(0, 6);
 
   const ranked = [...assignments]
-    .map((a) => ({ a, p: computePriority(a, tasks.filter((t) => t.assignmentId === a.id)) }))
+    .map((a) => ({ a, p: priorityFor(state, a) }))
     .sort((x, y) => y.p.score - x.p.score);
 
   const top = ranked[0];

@@ -1,3 +1,4 @@
+import { priorityFor } from "../../momentum/engine";
 import { defineTool } from "@lovable.dev/mcp-js";
 import { loadWorkspace } from "../state";
 import { computePriority, completionPct } from "../../momentum/priority";
@@ -13,7 +14,7 @@ export default defineTool({
     const rows = ws.assignments
       .map((a) => {
         const tasks = ws.tasks.filter((t) => t.assignmentId === a.id);
-        const p = computePriority(a, tasks);
+        const p = priorityFor(ws as never, a);
         return { id: a.id, title: a.title, module: a.module, deadline: a.deadline, priorityScore: p.score, priorityLevel: p.level, percentComplete: completionPct(tasks), explanation: p.explanation };
       })
       .sort((x, y) => y.priorityScore - x.priorityScore);

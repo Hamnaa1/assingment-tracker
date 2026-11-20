@@ -60,6 +60,8 @@ export interface PriorityBreakdown {
   workload: number;
   importance: number;
   risk: number;
+  difficulty?: number;
+  weights?: { urgency: number; workload: number; importance: number; difficulty: number; risk: number };
   explanation: string;
 }
 

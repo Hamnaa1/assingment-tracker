@@ -99,7 +99,23 @@ export default function MomentumLayout() {
   if (!authReady) return null;
   if (!session) return <Navigate to={"/login?next=" + encodeURIComponent(location.pathname + location.search)} replace />;
   if (!dataReady) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading your workspace…</div>;
-  if (needsOnboarding(state) && location.pathname !== "/welcome") return <Navigate to="/welcome" replace />;
+  if (needsOnboarding(state)) {
+    if (location.pathname !== "/welcome") return <Navigate to="/welcome" replace />;
+    // First run after sign-up: onboarding is full screen, before the app itself.
+    return (
+      <XpProvider>
+        <div className="min-h-screen bg-background px-4 py-8 md:py-12">
+          <div className="mx-auto mb-8 flex w-full max-w-3xl items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-lavender">
+              <Zap className="h-5 w-5 text-white" fill="currentColor" />
+            </div>
+            <span className="text-base font-extrabold tracking-tight">MOMENTUM</span>
+          </div>
+          <Outlet />
+        </div>
+      </XpProvider>
+    );
+  }
 
   return (
     <XpProvider>

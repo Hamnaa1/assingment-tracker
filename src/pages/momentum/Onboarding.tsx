@@ -14,7 +14,7 @@ import { useMomentum } from "@/lib/momentum/store";
 import { prefsOf } from "@/lib/momentum/engine";
 import { PRESETS, THEMES, themeOf, WIDGETS, visibleWidgets, type ColourTheme, type DashboardPreset } from "@/lib/momentum/dashboard";
 import { STUDY_PERIODS, type StudyPeriod } from "@/lib/momentum/schedule";
-import { defaultAnswers, profileFromAnswers, sessionLength, withFocusSupport, type OnboardingAnswers } from "@/lib/momentum/onboarding";
+import { defaultAnswers, needsOnboarding, profileFromAnswers, sessionLength, withFocusSupport, type OnboardingAnswers } from "@/lib/momentum/onboarding";
 import { cn } from "@/lib/utils";
 import { usePlanCommit } from "@/components/momentum/PlanUpdate";
 import { toast } from "sonner";
@@ -62,6 +62,7 @@ export default function Onboarding() {
 
   const profile = useMemo(() => profileFromAnswers(a, state.dashboard, prefsOf(state)), [a, state]);
   const hasExisting = !!(state.dashboard || state.availability);
+  const firstRun = needsOnboarding(state);
 
   const steps: { title: string; sub: string; body: ReactNode }[] = [
     { title: "Welcome to Momentum", sub: "Let's tailor Momentum to you. First, which best describes you?", body: (
@@ -202,6 +203,7 @@ export default function Onboarding() {
       <div className="flex flex-col gap-1.5">
         <Progress value={((step + 1) / steps.length) * 100} aria-label={`Step ${step + 1} of ${steps.length}`} className="h-2 bg-brand-soft-purple [&>div]:bg-brand-lavender" />
         <p className="text-xs font-semibold text-muted-foreground" aria-live="polite">Step {step + 1} of {steps.length}</p>
+        {firstRun && <p className="text-xs text-muted-foreground">You can change these any time in Settings → Make Momentum Yours.</p>}
       </div>
       <Card key={step} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 border-border/80 bg-brand-soft-white shadow-sm"><CardContent className="p-5">{steps[step].body}</CardContent></Card>
       <div className="flex justify-between">

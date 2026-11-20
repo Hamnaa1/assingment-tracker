@@ -95,8 +95,8 @@ export default function Settings() {
             <span className="font-bold text-foreground">Momentum</span> — Plan smarter. Stay focused. Submit stronger.
           </p>
           <p>
-            An AI-powered student productivity and accountability platform. Brief analysis, plan generation, distraction
-            blocking, evidence verification and assignment review are simulated demo features in this build. Calendar links are read-only and stored only in your account.
+            An AI-powered student productivity and accountability platform. Brief analysis, plan generation and assignment review use a
+            real AI model (with an offline fallback). Distraction blocking and evidence verification are simulated demo features in this build. Calendar links are read-only and stored only in your account.
           </p>
         </CardContent>
       </Card>

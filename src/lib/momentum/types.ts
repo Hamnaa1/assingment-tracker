@@ -84,7 +84,7 @@ export interface ReviewResult {
   strengths: string[];
   missing: string[];
   suggestions: ReviewSuggestion[];
-  simulated: true;
+  simulated: boolean; // true when produced by the local heuristic fallback
 }
 
 /** A study session scheduled by Momentum, linked to an assignment and task. */

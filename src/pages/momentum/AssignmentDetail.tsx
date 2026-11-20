@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarClock, CalendarPlus, CalendarRange, Check, Flag, Pencil, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { AssignmentForm, draftFromAssignment, validateDraft, type AssignmentDraft } from "@/components/momentum/AssignmentForm";
 import { ScheduleDialog } from "@/components/momentum/ScheduleDialog";
-import { generatePlan } from "@/lib/momentum/ai";
+import { generatePlanAI } from "@/lib/momentum/aiClient";
 import { busyIntervals, scheduleTasks, type ScheduleResult } from "@/lib/momentum/schedule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,7 @@ export default function AssignmentDetail() {
   const [scheduleFor, setScheduleFor] = useState<Task | null>(null);
   const [preview, setPreview] = useState<ScheduleResult | null>(null);
   const [regenOpen, setRegenOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const sessions = useMemo(() => (state.studySessions ?? []).filter((s) => s.assignmentId === id), [state.studySessions, id]);
 
   const sorted = useMemo(() => [...tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)), [tasks]);
@@ -155,10 +156,13 @@ export default function AssignmentDetail() {
     toast.success("Assignment saved", { description: "Regenerate your plan to use the updated details." });
   };
 
-  const regenerate = () => {
-    const doneTitles = new Set(tasks.filter((t) => t.completed).map((t) => t.title.toLowerCase()));
-    const next = generatePlan(assignment).filter((t) => !doneTitles.has(t.title.toLowerCase()));
+  const regenerate = async () => {
+    setRegenerating(true);
+    const done = tasks.filter((t) => t.completed);
+    const doneTitles = new Set(done.map((t) => t.title.toLowerCase()));
+    const next = (await generatePlanAI(assignment, done.map((t) => t.title))).data.filter((t) => !doneTitles.has(t.title.toLowerCase()));
     dispatch({ type: "replaceTasks", assignmentId: assignment.id, tasks: next });
+    setRegenerating(false);
     setPlanStale(false);
     setRegenOpen(false);
     toast.success("Plan regenerated", { description: "Completed tasks were kept. Re-run “Schedule around my calendar” to book new sessions." });
@@ -238,7 +242,7 @@ export default function AssignmentDetail() {
         <Card className="border-brand-lavender/30 bg-brand-soft-purple/60 shadow-sm">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
             <p className="text-sm text-brand-charcoal"><span className="font-bold">Details updated.</span> Regenerate the plan so tasks match your corrected brief. Completed tasks are kept.</p>
-            <Button size="sm" className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={regenerate}><RefreshCw className="mr-1.5 h-4 w-4" /> Regenerate plan</Button>
+            <Button size="sm" className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={regenerate} disabled={regenerating}><RefreshCw className={cn("mr-1.5 h-4 w-4", regenerating && "animate-spin")} /> Regenerate plan</Button>
           </CardContent>
         </Card>
       )}
@@ -460,7 +464,7 @@ export default function AssignmentDetail() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setRegenOpen(false)}>Cancel</Button>
-            <Button className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={regenerate}>Regenerate</Button>
+            <Button className="bg-brand-lavender text-white hover:bg-brand-lavender/90" onClick={regenerate} disabled={regenerating}>{regenerating ? "Regenerating…" : "Regenerate"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -184,11 +184,11 @@ export function CustomiseDashboard({ open, onOpenChange, initialTab = "look" }: 
 
             <TabsContent value="widgets" className="mt-0 flex flex-col gap-5">
               <Section title="Main dashboard">
-                <WidgetList<HomeWidgetId> order={dashboardOf(dash).homeOrder!} hidden={dashboardOf(dash).homeHidden!} labels={HOME_WIDGETS} onChange={(o, h) => setDash({ ...dash, homeOrder: o, homeHidden: h })} />
+                <WidgetList order={dashboardOf(dash).homeOrder!} hidden={dashboardOf(dash).homeHidden!} labels={HOME_WIDGETS} onChange={(o, h) => setDash({ ...dash, homeOrder: o, homeHidden: h })} />
                 <p className="text-xs text-muted-foreground">Deadline and scheduling warnings always show.</p>
               </Section>
               <Section title="Study Plan · Advanced Planning">
-                <WidgetList<WidgetId> order={dash.order} hidden={dash.hidden} labels={WIDGETS} onChange={(o, h) => custom({ ...dash, order: o, hidden: h })} />
+                <WidgetList order={dash.order} hidden={dash.hidden} labels={WIDGETS} onChange={(o, h) => custom({ ...dash, order: o, hidden: h })} />
               </Section>
             </TabsContent>
 

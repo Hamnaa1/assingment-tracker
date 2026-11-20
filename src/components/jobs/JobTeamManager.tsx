@@ -317,7 +317,7 @@ export const JobTeamManager = ({ jobId }: JobTeamManagerProps) => {
     try {
       const { error } = await supabase
         .from('job_acl')
-        .update({ [field]: value })
+        .update({ [field]: value } as { can_view?: boolean })
         .eq('id', memberId);
 
       if (error) throw error;

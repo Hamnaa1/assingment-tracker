@@ -51,7 +51,7 @@ export function AssignmentForm({ value, onChange, showAiNotice = true }: { value
     <div className="grid grid-cols-2 gap-4">
       {showAiNotice && (
         <div className="col-span-2 flex items-start gap-2 rounded-lg border border-brand-warning/40 bg-brand-warning/10 p-3 text-xs">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-warning" />
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-warning-text" />
           <span>AI-extracted details can be wrong. Check every field — especially the deadline, word count and rubric — and correct anything before generating your plan.</span>
         </div>
       )}
@@ -117,7 +117,7 @@ export function AssignmentForm({ value, onChange, showAiNotice = true }: { value
       <div className="col-span-2 flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <Label>Rubric</Label>
-          <span className={rubricTotal === 100 ? "text-xs text-muted-foreground" : "text-xs font-semibold text-brand-warning"}>Total {rubricTotal}%</span>
+          <span className={rubricTotal === 100 ? "text-xs text-muted-foreground" : "text-xs font-semibold text-brand-warning-text"}>Total {rubricTotal}%</span>
         </div>
         {value.rubric.map((r, i) => (
           <div key={i} className="flex items-center gap-1.5">

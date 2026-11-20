@@ -19,7 +19,7 @@
     --color-secondary: #e9e5ff;
     --color-secondary-foreground: #242330;
     --color-muted: #f7f6fc;
-    --color-muted-foreground: #a5a2b5;
+    --color-muted-foreground: #6b6880;
     --color-accent: #e9e5ff;
     --color-accent-foreground: #242330;
     --color-destructive: #e87575;
@@ -38,6 +38,10 @@
     --brand-success: #55a889;
     --brand-warning: #e5ad63;
     --brand-error: #e87575;
+    /* AA-contrast text versions of status colours (same in every theme) */
+    --brand-success-text: #2f7d60;
+    --brand-warning-text: #8a540d;
+    --brand-error-text: #b83c3c;
 
     --radius: 0.5rem;
 
@@ -52,34 +56,35 @@
     --sidebar-ring: #8875e8;
   }
 
-  /* Student colour themes (Customise Dashboard). Success/warning/error stay fixed. */
+  /* Student colour themes. --brand-lavender is the AA-darkened action shade of the theme primary
+     (white text >= 4.5:1); pastel secondary/background tints keep the soft look. Status colours stay fixed. */
   :root, :root[data-theme="lavender"] {
-    --brand-lavender: #9670d4;
+    --brand-lavender: #7a52bf;
     --brand-lilac: #c3aef0;
     --brand-soft-purple: #ede4ff;
     --brand-soft-white: #f8f5ff;
     --color-background: #f8f5ff;
     --color-muted: #f8f5ff;
-    --color-primary: #9670d4;
+    --color-primary: #7a52bf;
     --color-secondary: #ede4ff;
     --color-accent: #ede4ff;
-    --color-ring: #9670d4;
-    --sidebar-primary: #9670d4;
-    --sidebar-ring: #9670d4;
+    --color-ring: #7a52bf;
+    --sidebar-primary: #7a52bf;
+    --sidebar-ring: #7a52bf;
   }
   :root[data-theme="sky"] {
-    --brand-lavender: #5689dc;
+    --brand-lavender: #3b6dc0;
     --brand-lilac: #a9c6f2;
     --brand-soft-purple: #dfebff;
     --brand-soft-white: #f4f8ff;
     --color-background: #f4f8ff;
     --color-muted: #f4f8ff;
-    --color-primary: #5689dc;
+    --color-primary: #3b6dc0;
     --color-secondary: #dfebff;
     --color-accent: #dfebff;
-    --color-ring: #5689dc;
-    --sidebar-primary: #5689dc;
-    --sidebar-ring: #5689dc;
+    --color-ring: #3b6dc0;
+    --sidebar-primary: #3b6dc0;
+    --sidebar-ring: #3b6dc0;
   }
 
   .dark {

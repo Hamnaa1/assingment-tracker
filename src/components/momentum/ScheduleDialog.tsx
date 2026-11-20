@@ -122,7 +122,7 @@ export function ScheduleDialog({ assignment, task, session, onDone }: { assignme
           <Search className="mr-1.5 h-4 w-4" /> Find available time
         </Button>
         {clash && (
-          <p className="text-xs font-semibold text-brand-error">
+          <p className="text-xs font-semibold text-brand-error-text">
             Overlaps “{clash.title}”. Pick another time or use Find available time.
           </p>
         )}

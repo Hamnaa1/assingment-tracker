@@ -28,7 +28,7 @@ export function DeadlinePill({ deadline }: { deadline: string }) {
     <span
       className={cn(
         "inline-flex items-center gap-1.5 text-xs font-semibold",
-        overdue ? "text-brand-error" : soon ? "text-brand-warning" : "text-muted-foreground",
+        overdue ? "text-brand-error-text" : soon ? "text-brand-warning-text" : "text-muted-foreground",
       )}
     >
       <CalendarClock className="h-3.5 w-3.5" />

@@ -74,9 +74,9 @@ export function CalendarConnections() {
               <div key={f.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/50 px-2.5 py-2">
                 <div className="min-w-0">
                   {f.status === "error" ? (
-                    <Badge variant="outline" className="border-brand-error/40 text-brand-error"><AlertCircle className="mr-1 h-3 w-3" /> Sync error</Badge>
+                    <Badge variant="outline" className="border-brand-error/40 text-brand-error-text"><AlertCircle className="mr-1 h-3 w-3" /> Sync error</Badge>
                   ) : (
-                    <Badge variant="outline" className="border-brand-success/40 text-brand-success"><CheckCircle2 className="mr-1 h-3 w-3" /> Connected</Badge>
+                    <Badge variant="outline" className="border-brand-success/40 text-brand-success-text"><CheckCircle2 className="mr-1 h-3 w-3" /> Connected</Badge>
                   )}
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {f.error ?? (f.lastSyncedAt ? `Last synced ${new Date(f.lastSyncedAt).toLocaleString()}` : "")}
@@ -89,7 +89,7 @@ export function CalendarConnections() {
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="ghost" className="text-brand-error hover:text-brand-error"><Unlink className="mr-1.5 h-4 w-4" /> Disconnect</Button>
+                      <Button size="sm" variant="ghost" className="text-brand-error-text hover:text-brand-error-text"><Unlink className="mr-1.5 h-4 w-4" /> Disconnect</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>

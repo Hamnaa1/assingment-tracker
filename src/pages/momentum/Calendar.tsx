@@ -28,7 +28,7 @@ interface Item {
 }
 
 const KIND_STYLE: Record<Kind, string> = {
-  deadline: "bg-brand-error/15 text-brand-error border-brand-error/30",
+  deadline: "bg-brand-error/15 text-brand-error-text border-brand-error/30",
   session: "bg-brand-lavender text-white border-brand-lavender",
   personal: "bg-muted text-foreground border-border",
 };
@@ -241,7 +241,7 @@ export default function CalendarPage() {
                   <Button variant="outline" onClick={() => setRescheduling(true)}>Reschedule</Button>
                   <Button
                     variant="outline"
-                    className="text-brand-error hover:text-brand-error"
+                    className="text-brand-error-text hover:text-brand-error-text"
                     onClick={() => {
                       if (!window.confirm("Remove this study session from your Momentum calendar?")) return;
                       dispatch({ type: "deleteStudySession", id: selectedSession.id });

@@ -74,7 +74,7 @@ export default function StudyPlan() {
     risk: (<>{behind.length > 0 ? (
         <Card className="border-brand-warning/40 bg-brand-warning/10 shadow-sm">
           <CardContent className="flex flex-col gap-3 p-4">
-            <p className="flex items-center gap-2 text-sm font-bold"><AlertTriangle className="h-4 w-4 text-brand-warning" /> You're falling behind on {behind.length} assignment{behind.length > 1 ? "s" : ""}</p>
+            <p className="flex items-center gap-2 text-sm font-bold"><AlertTriangle className="h-4 w-4 text-brand-warning-text" /> You're falling behind on {behind.length} assignment{behind.length > 1 ? "s" : ""}</p>
             {behind.map((b) => (
               <div key={b.assignmentId} className="text-sm">
                 <Link to={`/assignments/${b.assignmentId}`} className="font-semibold underline-offset-2 hover:underline">{b.title}</Link>
@@ -86,7 +86,7 @@ export default function StudyPlan() {
         </Card>
       ) : (
         <Card className="border-brand-success/30 bg-brand-success/5 shadow-sm">
-          <CardContent className="flex items-center gap-2 p-4 text-sm"><CalendarCheck className="h-4 w-4 text-brand-success" /> You're on track — no overdue tasks, missed sessions or time shortfalls.</CardContent>
+          <CardContent className="flex items-center gap-2 p-4 text-sm"><CalendarCheck className="h-4 w-4 text-brand-success-text" /> You're on track — no overdue tasks, missed sessions or time shortfalls.</CardContent>
         </Card>
       )}</>),
     priorities: (<Card className="border-border/80 shadow-sm">

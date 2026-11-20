@@ -201,7 +201,7 @@ export default function AssignmentDetail() {
           </Button>
           <Button
             variant="outline"
-            className="text-brand-error hover:text-brand-error"
+            className="text-brand-error-text hover:text-brand-error-text"
             aria-label="Delete assignment"
             onClick={() => {
               if (!window.confirm(`Delete “${assignment.title}” and its tasks and study sessions?`)) return;
@@ -268,7 +268,7 @@ export default function AssignmentDetail() {
       <Card className={cn("shadow-sm", tight ? "border-brand-warning/40 bg-brand-warning/10" : "border-border/80")}>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex min-w-0 items-start gap-3">
-            <CalendarRange className={cn("mt-0.5 h-5 w-5 shrink-0", tight ? "text-brand-warning" : "text-brand-lavender")} />
+            <CalendarRange className={cn("mt-0.5 h-5 w-5 shrink-0", tight ? "text-brand-warning-text" : "text-brand-lavender")} />
             <div className="text-sm">
               <p className="font-bold">
                 {tight
@@ -345,7 +345,7 @@ export default function AssignmentDetail() {
       {behind && (
         <Card className="border-brand-warning/40 bg-brand-warning/10 shadow-sm">
           <CardContent className="flex items-start gap-3 p-4">
-            <Flag className="mt-0.5 h-4 w-4 shrink-0 text-brand-warning" />
+            <Flag className="mt-0.5 h-4 w-4 shrink-0 text-brand-warning-text" />
             <p className="text-sm">
               <span className="font-bold">You're falling behind.</span> {overdueTasks.length} task{overdueTasks.length === 1 ? " is" : "s are"} overdue.
               Prioritise "{overdueTasks[0].title}" today, then shift remaining tasks one day forward to get back on track.
@@ -402,7 +402,7 @@ export default function AssignmentDetail() {
                     )}
                   </div>
                   {t.description && <p className="ml-8 mt-0.5 text-xs text-muted-foreground">{t.description}</p>}
-                  <p className={cn("ml-8 mt-1 text-xs", overdue ? "font-semibold text-brand-error" : "text-muted-foreground")}>
+                  <p className={cn("ml-8 mt-1 text-xs", overdue ? "font-semibold text-brand-error-text" : "text-muted-foreground")}>
                     {overdue ? "Overdue · " : ""}Due {new Date(t.dueDate).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                     {t.estimatedMinutes > 0 ? ` · ~${t.estimatedMinutes}min` : ""}
                   </p>
@@ -435,7 +435,7 @@ export default function AssignmentDetail() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-brand-error hover:text-brand-error"
+                    className="h-8 w-8 text-brand-error-text hover:text-brand-error-text"
                     aria-label="Delete task"
                     onClick={() => window.confirm(`Delete “${t.title}”?`) && dispatch({ type: "deleteTask", id: t.id })}
                   >

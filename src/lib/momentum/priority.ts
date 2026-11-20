@@ -116,8 +116,8 @@ export function computePriority(assignment: Assignment, tasks: Task[], now = new
 }
 
 export const LEVEL_STYLES: Record<PriorityLevel, { badge: string; bar: string; label: string }> = {
-  critical: { badge: "bg-brand-error/10 text-brand-error border-brand-error/30", bar: "bg-brand-error", label: "Critical" },
-  high: { badge: "bg-brand-warning/10 text-brand-warning border-brand-warning/30", bar: "bg-brand-warning", label: "High" },
+  critical: { badge: "bg-brand-error/10 text-brand-error-text border-brand-error/30", bar: "bg-brand-error", label: "Critical" },
+  high: { badge: "bg-brand-warning/10 text-brand-warning-text border-brand-warning/30", bar: "bg-brand-warning", label: "High" },
   medium: { badge: "bg-brand-lavender/10 text-brand-lavender border-brand-lavender/30", bar: "bg-brand-lavender", label: "Medium" },
   low: { badge: "bg-muted text-muted-foreground border-border", bar: "bg-muted-foreground", label: "Low" },
 };

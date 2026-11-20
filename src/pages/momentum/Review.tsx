@@ -43,7 +43,7 @@ export default function Review() {
     }, 2000);
   };
 
-  const scoreColor = (s: number) => (s >= 75 ? "text-brand-success" : s >= 50 ? "text-brand-warning" : "text-brand-error");
+  const scoreColor = (s: number) => (s >= 75 ? "text-brand-success-text" : s >= 50 ? "text-brand-warning-text" : "text-brand-error-text");
 
   return (
     <div className="flex flex-col gap-6">
@@ -140,7 +140,7 @@ export default function Review() {
             <Card className="border-border/80 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <CheckCircle2 className="h-5 w-5 text-brand-success" /> Strengths
+                  <CheckCircle2 className="h-5 w-5 text-brand-success-text" /> Strengths
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -159,7 +159,7 @@ export default function Review() {
             <Card className="border-border/80 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <AlertTriangle className="h-5 w-5 text-brand-warning" /> Missing requirements
+                  <AlertTriangle className="h-5 w-5 text-brand-warning-text" /> Missing requirements
                 </CardTitle>
               </CardHeader>
               <CardContent>

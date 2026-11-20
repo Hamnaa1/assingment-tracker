@@ -76,11 +76,17 @@ export async function analyzeBriefAI(text: string): Promise<AiOutcome<BriefAnaly
 }
 
 /** Real-LLM plan; dates are computed here from day offsets so they always fit before the deadline. */
-export async function generatePlanAI(assignment: Assignment): Promise<AiOutcome<Task[]>> {
+export async function generatePlanAI(assignment: Assignment, completedTasks: string[] = []): Promise<AiOutcome<Task[]>> {
   try {
     const now = new Date();
     const days = Math.max(daysUntil(assignment.deadline, now), 1);
-    const r = await callAi({ action: "generatePlan", assignment: assignmentPayload(assignment), today: isoDay(now), daysUntilDeadline: days });
+    const r = await callAi({
+      action: "generatePlan",
+      assignment: assignmentPayload(assignment),
+      today: isoDay(now),
+      daysUntilDeadline: days,
+      completedTasks: completedTasks.slice(0, 50).map((t) => t.slice(0, 200)),
+    });
     const raw = Array.isArray(r.tasks) ? r.tasks : [];
     const tasks: Task[] = raw
       .map((t: Record<string, unknown>): Task | null => {

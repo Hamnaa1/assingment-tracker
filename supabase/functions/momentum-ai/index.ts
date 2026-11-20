@@ -35,7 +35,7 @@ const assignmentSchema = z.object({
 
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("analyzeBrief"), text: z.string().min(1).max(40000), today: z.string().max(40) }),
-  z.object({ action: z.literal("generatePlan"), assignment: assignmentSchema, today: z.string().max(40), daysUntilDeadline: z.number() }),
+  z.object({ action: z.literal("generatePlan"), assignment: assignmentSchema, today: z.string().max(40), daysUntilDeadline: z.number(), completedTasks: z.array(z.string().max(200)).max(50).optional() }),
   z.object({ action: z.literal("reviewWork"), assignment: assignmentSchema, submission: z.string().min(1).max(60000) }),
 ]);
 
@@ -138,7 +138,7 @@ function buildMessages(req: z.infer<typeof requestSchema>) {
       const { briefText, ...details } = req.assignment;
       return [
         { role: "system", content: "You are an academic study coach. Build a realistic, specific task plan for a student: research, outlining, drafting each section, revision against the rubric, referencing and final submission. Tasks must be concrete to THIS brief (name the actual sections, sources, theories), not generic. Use 6-14 tasks. Mark 2-4 key checkpoints as milestones. Spread dayOffset across the available days; the final task must be on the last day." },
-        { role: "user", content: `Today is ${req.today}. Days until deadline: ${req.daysUntilDeadline} (valid dayOffset range 0-${Math.max(0, req.daysUntilDeadline - 1)}).\n\nAssignment details:\n${JSON.stringify(details, null, 2)}${briefText ? `\n\nOriginal brief:\n"""\n${briefText.slice(0, 15000)}\n"""` : ""}` },
+        { role: "user", content: `Today is ${req.today}. Days until deadline: ${req.daysUntilDeadline} (valid dayOffset range 0-${Math.max(0, req.daysUntilDeadline - 1)}).\n\nAssignment details:\n${JSON.stringify(details, null, 2)}${briefText ? `\n\nOriginal brief:\n"""\n${briefText.slice(0, 15000)}\n"""` : ""}${req.completedTasks?.length ? `\n\nThe student has ALREADY COMPLETED these tasks — do not include them or equivalent work again; plan only the remaining work:\n${req.completedTasks.map((t) => `- ${t}`).join("\n")}` : ""}` },
       ];
     }
     case "reviewWork": {

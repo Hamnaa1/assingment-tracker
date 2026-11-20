@@ -158,8 +158,9 @@ export default function AssignmentDetail() {
 
   const regenerate = async () => {
     setRegenerating(true);
-    const doneTitles = new Set(tasks.filter((t) => t.completed).map((t) => t.title.toLowerCase()));
-    const next = (await generatePlanAI(assignment)).data.filter((t) => !doneTitles.has(t.title.toLowerCase()));
+    const done = tasks.filter((t) => t.completed);
+    const doneTitles = new Set(done.map((t) => t.title.toLowerCase()));
+    const next = (await generatePlanAI(assignment, done.map((t) => t.title))).data.filter((t) => !doneTitles.has(t.title.toLowerCase()));
     dispatch({ type: "replaceTasks", assignmentId: assignment.id, tasks: next });
     setRegenerating(false);
     setPlanStale(false);
